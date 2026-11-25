@@ -1,0 +1,125 @@
+/* ==========================================================================
+   dfm-craft.css — Optional Procedural Optical & Tactile Craft Layers
+   Zero visual lock-in: opt into any single layer or combine with real images
+   dropped into textures/. Works across 2D, 3D, Canvas, SVG, and Editorial.
+   ========================================================================== */
+
+/* 1. Film Grain (35mm fine or 16mm archival stock; supports deterministic --grain-x/y jitter) */
+.craft-grain,
+.craft-grain-heavy {
+  position: absolute;
+  inset: -40px;
+  pointer-events: none;
+  z-index: 850;
+  mix-blend-mode: overlay;
+  transform: translate3d(var(--grain-x, 0px), var(--grain-y, 0px), 0);
+  background-size: 220px 220px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+.craft-grain {
+  opacity: var(--craft-grain-opacity, 0.065);
+}
+
+.craft-grain-heavy {
+  opacity: var(--craft-grain-opacity, 0.14);
+  mix-blend-mode: soft-light;
+  background-size: 170px 170px;
+}
+
+/* 2. Print Halftone Dot Screen (tunable dot pitch --ht-size, dot radius --ht-dot, color --ht-color) */
+.craft-halftone {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 820;
+  opacity: var(--ht-opacity, 0.16);
+  mix-blend-mode: var(--ht-blend, multiply);
+  background-image: radial-gradient(
+    var(--ht-color, #141311) var(--ht-dot, 1.35px),
+    transparent calc(var(--ht-dot, 1.35px) + 0.5px)
+  );
+  background-size: var(--ht-size, 9px) var(--ht-size, 9px);
+}
+
+/* Staggered classic 45-degree offset print halftone screen */
+.craft-halftone-print {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 820;
+  opacity: var(--ht-opacity, 0.14);
+  mix-blend-mode: var(--ht-blend, multiply);
+  background-image:
+    radial-gradient(var(--ht-color, #141311) var(--ht-dot, 1.3px), transparent calc(var(--ht-dot, 1.3px) + 0.5px)),
+    radial-gradient(var(--ht-color, #141311) var(--ht-dot, 1.3px), transparent calc(var(--ht-dot, 1.3px) + 0.5px));
+  background-size: var(--ht-size, 10px) var(--ht-size, 10px);
+  background-position: 0 0, calc(var(--ht-size, 10px) / 2) calc(var(--ht-size, 10px) / 2);
+}
+
+/* 3. Cinema Film Halation (warm crimson-orange optical bleed around bright text/highlights) */
+.craft-halation {
+  text-shadow:
+    0 0 2px rgba(255, 245, 232, 0.45),
+    0 0 14px rgba(232, 86, 42, 0.42),
+    0 0 38px rgba(212, 54, 24, 0.26);
+}
+
+.craft-halation-soft {
+  filter:
+    drop-shadow(0 0 8px rgba(232, 86, 42, 0.34))
+    drop-shadow(0 0 24px rgba(205, 48, 22, 0.2));
+}
+
+/* 4. Procedural Fine Paper Tooth (lightweight offline paper fiber simulation for bright grounds) */
+.craft-paper-fiber {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 810;
+  opacity: var(--paper-opacity, 0.085);
+  mix-blend-mode: multiply;
+  background-size: 320px 320px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04 0.45' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+
+/* 5. Optical Lens Vignette */
+.craft-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 840;
+  background: radial-gradient(
+    ellipse at 50% 48%,
+    rgba(0, 0, 0, 0) var(--vig-inner, 52%),
+    rgba(0, 0, 0, var(--vig-strength, 0.44)) 100%
+  );
+}
+
+/* 6. Broadcast / Archival Micro Scanlines */
+.craft-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 830;
+  opacity: var(--scan-opacity, 0.08);
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.85) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+}
+
+/* 7. Real Texture Asset Overlay Slot (pair with real CC0 scans in textures/) */
+.craft-texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 835;
+  background-size: cover;
+  background-position: center;
+  mix-blend-mode: var(--tex-blend, multiply);
+  opacity: var(--tex-opacity, 0.28);
+}

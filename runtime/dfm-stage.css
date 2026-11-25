@@ -1,0 +1,233 @@
+/* ==========================================================================
+   dfm-stage.css — OpenFilm Native Stage, 5-Plane Depth & Finishing Layer
+   Built from scratch on Design for Motion principles (Zero template bloat)
+   ========================================================================== */
+
+:root {
+  /* Palette tokens (override per-film in project theme.css) */
+  --dfm-ground: #0c0d10;
+  --dfm-surface: #15171d;
+  --dfm-ink: #f2efe9;
+  --dfm-muted: #8c8982;
+  --dfm-accent: #e54d2e;
+
+  /* Typography tokens (cast intentionally per film) */
+  --dfm-font-display: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  --dfm-font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --dfm-font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+
+  /* Format & Safe Area (16:9 default: 1920x1080) */
+  --dfm-width: 1920px;
+  --dfm-height: 1080px;
+  --safe-top: 96px;
+  --safe-right: 120px;
+  --safe-bottom: 96px;
+  --safe-left: 120px;
+
+  /* 3D Camera & Perspective */
+  --dfm-perspective: 1400px;
+
+  /* Unified Finishing Layer (Q12 Belonging) */
+  --dfm-grain-opacity: 0.045;
+  --dfm-vignette-strength: 0.42;
+}
+
+/* 9:16 Vertical Mobile Preset (1080x1920, balanced Xiaohongshu/Douyin safe area) */
+:root[data-aspect="9:16"] {
+  --dfm-width: 1080px;
+  --dfm-height: 1920px;
+  --safe-top: 240px;
+  --safe-right: 140px;
+  --safe-bottom: 380px;
+  --safe-left: 124px;
+}
+
+/* 1:1 Square Preset */
+:root[data-aspect="1:1"] {
+  --dfm-width: 1080px;
+  --dfm-height: 1080px;
+  --safe-top: 96px;
+  --safe-right: 96px;
+  --safe-bottom: 96px;
+  --safe-left: 96px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: var(--dfm-width);
+  height: var(--dfm-height);
+  overflow: hidden;
+  background: var(--dfm-ground);
+  color: var(--dfm-ink);
+  font-family: var(--dfm-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+
+/* --------------------------------------------------------------------------
+   1. Cinema Stage & 5 Spatial Planes (Ch 9: Depth & Three Perspectives)
+   -------------------------------------------------------------------------- */
+.dfm-stage {
+  position: relative;
+  width: var(--dfm-width);
+  height: var(--dfm-height);
+  overflow: hidden;
+  perspective: var(--dfm-perspective);
+  perspective-origin: 50% 50%;
+  background: var(--dfm-ground);
+}
+
+.dfm-camera {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.dfm-plane {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform, opacity, filter;
+  pointer-events: none;
+}
+
+/* Default Z-depths & Atmospheric/Color Perspective recession */
+.dfm-plane[data-plane="ebg"] {
+  --plane-z: -420px;
+  transform: translate3d(0, 0, var(--plane-z)) scale(1.30);
+  opacity: 0.72;
+}
+
+.dfm-plane[data-plane="bg"] {
+  --plane-z: -210px;
+  transform: translate3d(0, 0, var(--plane-z)) scale(1.15);
+  opacity: 0.88;
+}
+
+.dfm-plane[data-plane="mg"] {
+  --plane-z: 0px;
+  transform: translate3d(0, 0, var(--plane-z));
+}
+
+.dfm-plane[data-plane="fg"] {
+  --plane-z: 110px;
+  transform: translate3d(0, 0, var(--plane-z)) scale(0.922);
+}
+
+.dfm-plane[data-plane="efg"] {
+  --plane-z: 240px;
+  transform: translate3d(0, 0, var(--plane-z)) scale(0.828);
+}
+
+/* Continuous 3D World Space (Non-Slide Infinite Canvas Architecture) */
+.dfm-world {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  will-change: transform, filter;
+}
+
+.dfm-node {
+  position: absolute;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.dfm-efg-occluder {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Safe-area interior box for readable Hero typography & critical elements */
+.dfm-safe {
+  position: absolute;
+  top: var(--safe-top);
+  right: var(--safe-right);
+  bottom: var(--safe-bottom);
+  left: var(--safe-left);
+}
+
+/* --------------------------------------------------------------------------
+   2. Editorial Typography Primitives (Ch 17: Casting & Integrating Type)
+   -------------------------------------------------------------------------- */
+.dfm-display {
+  font-family: var(--dfm-font-display);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.dfm-sans {
+  font-family: var(--dfm-font-sans);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.dfm-mono {
+  font-family: var(--dfm-font-mono);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.dfm-num {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Clip mask container for clean directional editorial reveals */
+.dfm-mask {
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.dfm-mask-inner {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   3. Unified Finishing Layer (Q12: Film Belonging & Anti-Plastic Craft)
+   -------------------------------------------------------------------------- */
+.dfm-finishing {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 900;
+}
+
+/* Subtle optical vignette */
+.dfm-finishing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(0, 0, 0, 0) 56%,
+    rgba(0, 0, 0, var(--dfm-vignette-strength)) 100%
+  );
+}
+
+/* Offline procedural SVG film grain (no external images required) */
+.dfm-finishing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: var(--dfm-grain-opacity);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+}

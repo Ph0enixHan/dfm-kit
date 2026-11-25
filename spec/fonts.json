@@ -1,0 +1,60 @@
+{
+  "version": "0.3.0",
+  "description": "Curated Google Fonts Casting Library for OpenFilm (free for commercial use, dynamic Latin & CJK subsetting).",
+  "castings": [
+    {
+      "id": "cinema-editorial-serif",
+      "mood": "Title sequences, high-craft editorial, documentary essays, restrained authority (A24 / literary feel)",
+      "latin": "Instrument Serif",
+      "zh": "Noto Serif SC",
+      "mono": "JetBrains Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Noto+Serif+SC:wght@400;600;700;900&display=swap",
+      "notes": "High-contrast serif carries cinematic weight; pair with small wide-tracked mono metadata (tracking 0.16-0.18em) for quiet editorial contrast."
+    },
+    {
+      "id": "swiss-modern-sans",
+      "mood": "Swiss graphic design, modern SaaS, crisp explainers, clean technical clarity",
+      "latin": "Space Grotesk",
+      "zh": "Noto Sans SC",
+      "mono": "Space Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;500;700;900&family=Space+Grotesk:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap",
+      "notes": "Use extreme weight contrast (300 vs 900) and bold scale ratios (5:1+) to build pure modernist hierarchy."
+    },
+    {
+      "id": "poster-brutalist-impact",
+      "mood": "Archival print, bold poster manifestos, kinetic intros, high-velocity typographic punch",
+      "latin": "Anton",
+      "zh": "Noto Sans SC",
+      "mono": "IBM Plex Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+SC:wght@700;900&display=swap",
+      "notes": "Ultra-condensed heavy display with tight leading (line-height 0.94-1.02); pairs naturally with halftone grain and duotone print palettes."
+    },
+    {
+      "id": "humanist-ink-letter",
+      "mood": "Warm humanist storytelling, personal essays, tactile paper & ink",
+      "latin": "Newsreader",
+      "zh": "LXGW WenKai TC",
+      "mono": "IBM Plex Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=LXGW+WenKai+TC:wght@400;700&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400;1,6..72,600&display=swap",
+      "notes": "Organic handwritten warmth paired with italic Newsreader and warm cotton paper surfaces."
+    },
+    {
+      "id": "high-fashion-contrast",
+      "mood": "Luxury branding, architectural elegance, slow-paced contemplative titles",
+      "latin": "Cormorant Garamond",
+      "zh": "Noto Serif SC",
+      "mono": "Space Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Noto+Serif+SC:wght@300;600;700&family=Space+Mono:wght@400&display=swap",
+      "notes": "Hairline serif strokes paired with generous negative space for refined brand lockups."
+    },
+    {
+      "id": "technical-dossier",
+      "mood": "Research dossiers, engineering benchmarks, financial & scientific data storytelling",
+      "latin": "IBM Plex Sans",
+      "zh": "Noto Sans SC",
+      "mono": "JetBrains Mono",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;600;700&display=swap",
+      "notes": "Enforce font-variant-numeric: tabular-nums on all metrics for calm, surgical precision."
+    }
+  ]
+}

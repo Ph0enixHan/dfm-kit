@@ -1,0 +1,35 @@
+{
+  "name": "dfm-kit",
+  "version": "0.3.0",
+  "description": "Fast, style-agnostic Design-for-Motion director toolkit, OKLCH Color Script engine, 13-API cinema optical lens kit, and 1-board visual microscope for programmatic video (OpenFilm built-in; Hyperframes & Remotion planned).",
+  "type": "module",
+  "bin": {
+    "dfm": "./cli/dfm.mjs"
+  },
+  "scripts": {
+    "install-skill": "node cli/dfm.mjs install-skill",
+    "textures:prep": "node cli/textures-prep.mjs"
+  },
+  "keywords": [
+    "dfm-kit",
+    "motion-design",
+    "design-for-motion",
+    "openfilm",
+    "hyperframes",
+    "remotion",
+    "oklch",
+    "color-script",
+    "ai-video",
+    "cinema-lens",
+    "agent-skill"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ph0enixHan/dfm-kit.git"
+  },
+  "homepage": "https://github.com/Ph0enixHan/dfm-kit#readme",
+  "license": "MIT"
+}

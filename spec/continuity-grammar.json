@@ -1,0 +1,42 @@
+{
+  "version": "0.3.0",
+  "title": "Non-Slide Continuity & Spatial Motion Grammar",
+  "antiSlidePrinciples": [
+    "Never fade Beat A out to an empty void before fading Beat B in — connect beats via continuous camera flight, shared-subject morphing, portal zoom, foreground occlusion wipes, or purposeful rhythmic match cuts.",
+    "Drive camera moves with physical acceleration curves (expoInOut / whipIn) and pair peak-velocity pans with proportional directional motion blur.",
+    "Use extreme foreground occluders (closest to camera, softly defocused, fastest parallax) to create immediate spatial depth.",
+    "Evolve depth-of-field focus and light/color polarity (dark <-> light, cool <-> warm) continuously along the emotional arc."
+  ],
+  "architectures": [
+    {
+      "id": "infinite-world-camera",
+      "name": "Continuous 3D World Camera",
+      "whenToUse": "Multi-beat explainers, conceptual essays, layered spatial storytelling",
+      "mechanism": "Place beat nodes in a shared 3D coordinate space (x, y, z, rx, ry, rz) and fly a deterministic camera between keyframes with directional blur and foreground parallax."
+    },
+    {
+      "id": "camera-tracked-type",
+      "name": "Camera-Tracked Kinetic Typography",
+      "whenToUse": "High-velocity hooks, manifesto intros, punchy rhythm shifts",
+      "mechanism": "Unfold words along a visual reading path while the camera tracks the active word and triggers background polarity flips on key beats."
+    },
+    {
+      "id": "state-morph-continuum",
+      "name": "Single-Subject State Morph",
+      "whenToUse": "Comparisons, anatomical/structural breakdowns, emotional reversals",
+      "mechanism": "Keep one primary visual subject on screen and continuously transform its geometry, cross-section, color temperature, and lighting across the full film."
+    },
+    {
+      "id": "kinetic-mechanical-rig",
+      "name": "Unified Mechanical / Radial Rig",
+      "whenToUse": "Timelines, step sequences, ranked showcases",
+      "mechanism": "Mount items onto a shared rotating dial or track so the active item scales into crisp focus while neighbors recede."
+    },
+    {
+      "id": "portal-match-cut",
+      "name": "Portal Zoom & Anchor Match Cut",
+      "whenToUse": "Seamless transitions across worlds, apps, or physical scales",
+      "mechanism": "Push into a screen, window, letterform, or geometric anchor until it fills the frame and resolves directly into the next environment."
+    }
+  ]
+}

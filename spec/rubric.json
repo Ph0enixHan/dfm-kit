@@ -1,0 +1,102 @@
+{
+  "version": "0.3.0",
+  "source": "Design for Motion Universal 16-Point Production QA Rubric (Style-Agnostic)",
+  "items": [
+    {
+      "id": "Q1",
+      "name": "Brief & Spec Alignment",
+      "automation": "deterministic",
+      "passCriteria": "brief.json declares concept, format specs, OKLCH colorScript, and beat plan, and all referenced scene files exist."
+    },
+    {
+      "id": "Q2",
+      "name": "Concept & Form Unity",
+      "automation": "visual-review",
+      "passCriteria": "Visual language grows organically from the content with clear Reduction and Amplification — never a recycled template."
+    },
+    {
+      "id": "Q3",
+      "name": "Narrative Tension & Pacing",
+      "automation": "hybrid",
+      "passCriteria": "Clear conceptual tension pair with varied beat energy across the timeline — never a flat rhythm."
+    },
+    {
+      "id": "Q4",
+      "name": "Visual Hierarchy & Pure Cinema Frame",
+      "automation": "hybrid",
+      "passCriteria": "Each frame has a clear primary focal point with clean reading order and zero slide-deck chrome (no corner pagination or numbered section eyebrows)."
+    },
+    {
+      "id": "Q5",
+      "name": "Positive & Negative Space Balance",
+      "automation": "visual-review",
+      "passCriteria": "Space balance fits the chosen visual medium — generous breathing room for minimalist work, clear sightlines for dense collage."
+    },
+    {
+      "id": "Q6",
+      "name": "Symmetry & Asymmetry Rhythm",
+      "automation": "visual-review",
+      "passCriteria": "Composition balance serves the narrative intent across beats rather than repeating a rigid centered layout."
+    },
+    {
+      "id": "Q7",
+      "name": "Grayscale Value Separation",
+      "automation": "deterministic",
+      "passCriteria": "In grayscale preview on review-board.png, figure/ground luminance separates cleanly without muddy mid-gray collapse."
+    },
+    {
+      "id": "Q8",
+      "name": "Color Script & Chroma Discipline",
+      "automation": "hybrid",
+      "passCriteria": "Follows an intentional color harmony and 60-30-10 chroma budget (reserving high saturation for focal moments, avoiding default software UI palettes)."
+    },
+    {
+      "id": "Q9",
+      "name": "Depth & Visual Layering",
+      "automation": "visual-review",
+      "passCriteria": "Whether 2D or 3D, foreground/midground/background separate cleanly via value, scale, occlusion, perspective, or lighting."
+    },
+    {
+      "id": "Q10",
+      "name": "Shot Scale & Framing Variety",
+      "automation": "hybrid",
+      "passCriteria": "Varied framing and scale progression across beats rather than locking the entire film to one static shot size."
+    },
+    {
+      "id": "Q11",
+      "name": "Deterministic Motion & Continuity",
+      "automation": "deterministic",
+      "passCriteria": "Strictly driven by window.film.frame(t) with zero rAF/Math.random(); continuous visual motion visible across beats."
+    },
+    {
+      "id": "Q12",
+      "name": "Whole-Board Belonging",
+      "automation": "visual-review",
+      "passCriteria": "Across review-board.png, all beats unmistakably belong to the same cohesive film world."
+    },
+    {
+      "id": "Q13",
+      "name": "Typography Casting & Single-Track Captions",
+      "automation": "hybrid",
+      "passCriteria": "Typeface matches content voice with crisp kerning/integration; no double subtitles colliding with OpenFilm's native .vtt caption track."
+    },
+    {
+      "id": "Q14",
+      "name": "Render Performance & Craft Finish",
+      "automation": "deterministic",
+      "passCriteria": "No per-frame layout-thrashing style mutations (top/left/width/height); clean edges, lighting, and tactile finish."
+    },
+    {
+      "id": "Q15",
+      "name": "Viewport Clipping & Safe Zones",
+      "automation": "deterministic",
+      "passCriteria": "Zero unintended viewport clipping and zero focal-element safe-zone violations."
+    },
+    {
+      "id": "Q16",
+      "name": "OpenFilm Delivery & Zero-Crash Sweep",
+      "automation": "deterministic",
+      "passCriteria": "Exports window.film = { duration, ready, frame(t) }, passes full-timeline 0.25s exception sweep with zero errors, and has no blank opening frame."
+    }
+  ]
+}
