@@ -57,20 +57,6 @@ Assemble frame-synced SFX (`whoosh`, `impact`, `latch`) and restrained music tra
 
 ---
 
-## Real Cases Produced with `dfm-kit`
-
-### Case 1 · Editorial Product Launch Teaser (`STILL`, 16:9 · 14s)
-Warm archival cotton paper, matte ink typography, and one restrained vermilion cursor — dozens of overlapping notifications collapse in one physical sweep (`MOTION Δ57.73`, `ΔVal 199`, `SAFE OK`):
-
-![STILL Launch Teaser Review Board](./docs/images/05-case-still-teaser.png)
-
-### Case 2 · One-Sentence Cold-Start Science Explainer (`Why do elevators have mirrors?`, 9:16 · 60s)
-Generated from **a single one-line user prompt** with zero camera, color, or style instructions: a continuous architectural elevator cabin transitions smoothly into an overhead spatial accessibility diagram (`SAFE OK` across all 6 beats, zero slides, zero faux-3D):
-
-![One-Sentence Elevator Mirror Explainer Review Board](./docs/images/06-case-elevator-1line.png)
-
----
-
 ## Renderer Support
 
 `dfm-kit` is designed as a **renderer-agnostic craft & QA layer** for AI-assisted programmatic motion design:
