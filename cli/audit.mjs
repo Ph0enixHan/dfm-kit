@@ -87,6 +87,55 @@ function scanShotSource(filePath) {
     });
   }
 
+  // Collect linked local project CSS (excluding dfm runtime CSS) so external scene.css is also audited
+  const projectDir = path.dirname(filePath);
+  let cssBundle = "";
+  for (const m of src.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']/gi)) {
+    const href = m[1];
+    if (/^https?:|dfm-craft\.css|dfm-stage\.css/i.test(href)) continue;
+    const cssPath = path.resolve(projectDir, href);
+    if (fs.existsSync(cssPath)) {
+      cssBundle += "\n" + fs.readFileSync(cssPath, "utf8");
+    }
+  }
+  const styleCorpus = src + "\n" + cssBundle;
+
+  // Detect cheap skeuomorphic faux-3D CSS hacks (metallic conic-gradients, hard-offset fake extrusions, glossy plastic glare)
+  if (/(?:repeating-)?conic-gradient\s*\(/i.test(styleCorpus)) {
+    issues.push({
+      rule: "Q14",
+      level: "Fix",
+      msg: "conic-gradient detected (commonly produces cheap faux-metal/skeuomorphic CSS artifacts) — use clean matte architectural vector graphics or a real image asset via OpenFilm instead"
+    });
+  }
+  const hardExtrusionMatch = styleCorpus.match(
+    /box-shadow\s*:[^;{}]*?(?:^|[\s,])(-?\d{1,3})px\s+(-?\d{1,3})px\s+0(?:px)?(?:\s+0(?:px)?)?\s+(?:#|rgb|hsl|oklch|color-mix)/i
+  );
+  if (hardExtrusionMatch && (Math.abs(Number(hardExtrusionMatch[1])) >= 8 || Math.abs(Number(hardExtrusionMatch[2])) >= 8)) {
+    issues.push({
+      rule: "Q14",
+      level: "Fix",
+      msg: `Hard zero-blur offset box-shadow detected (${hardExtrusionMatch[1]}px ${hardExtrusionMatch[2]}px 0) — avoid cheap faux-3D CSS thickness extrusions; rely on real 3D camera parallax and clean matte planes`
+    });
+  }
+  if (/linear-gradient\s*\([^)]*#ffffff(?:[5-9a-f]{2}|[5-9a-f])\b[^)]*transparent/i.test(styleCorpus)) {
+    issues.push({
+      rule: "Q14",
+      level: "Fix",
+      msg: "Glossy diagonal white linear-gradient highlight detected — avoid fake plastic/glass CSS sheen; use clean matte OKLCH surfaces or real tactile textures"
+    });
+  }
+
+  // Flag bare system Arial/Times fallback when no Google Fonts or @font-face is loaded
+  const hasCustomFont = /fonts\.googleapis\.com|@font-face/i.test(styleCorpus);
+  if (!hasCustomFont && /font-family\s*:\s*["']?(?:Arial|Times New Roman|Helvetica)\b/i.test(styleCorpus)) {
+    issues.push({
+      rule: "Q13",
+      level: "Fix",
+      msg: "No Google Fonts or @font-face loaded (falling back to bare system Arial/Helvetica) — cast an intentional typeface from the curated Google Fonts list"
+    });
+  }
+
   return issues;
 }
 

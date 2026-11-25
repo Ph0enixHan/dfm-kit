@@ -27,7 +27,7 @@ AI 生成的动效视频常常带有明显的“PPT 感”：明暗发灰发平�
 `dfm-kit` 用 **5 块完全正交、零依赖的开源基础设施**系统性解决这些问题（仅需本机 **Node 22+** 与 Chrome/Edge）：
 
 1. **极速 1 板视觉显微镜（`dfm check`）** — 仅需 ~2–6 秒即可渲染 **1 张高信息密度 `review-board.png`**，一张图看全英雄帧、黑白明度分离（`ΔVal`）、3 帧动效连拍（`MOTION Δ`）、全片与单镜电影色带（Movie Color Barcode）以及安全区越界框（需要 5 张独立高清分板时加 `--full`）。
-2. **全时间轴防崩溃扫帧 + Q1–Q16 质检（`dfm audit`）** — 每次审片自动以 `0.25s` 步长扫完整个时间轴的 `frame(t)`，提前拦截隐藏运行时异常；同时自动检测确定性驱动、GPU 性能、黑白对比度、**反 PPT 翻页架构**（拦截 `display:none/visibility:hidden` 切页盒子与过长静帧）、纯净银幕画幅（拦截页码与小数字眉标）、单轨字幕冲突以及 `film.html` 音轨挂载。
+2. **全时间轴防崩溃扫帧 + Q1–Q16 质检（`dfm audit`）** — 每次审片自动以 `0.25s` 步长扫完整个时间轴的 `frame(t)`，提前拦截隐藏运行时异常；同时自动检测确定性驱动、GPU 性能、黑白对比度、**反 PPT 翻页架构**（拦截 `display:none/visibility:hidden` 切页盒子与过长静帧）、**诚实于媒介**（拦截廉价假金属 `conic-gradient`、塑料反光渐变、硬阴影假立体厚度与裸系统字体敷衍）、纯净银幕画幅（拦截页码与小数字眉标）、单轨字幕冲突以及 `film.html` 音轨挂载。
 3. **OKLCH 电影色彩脚本提取器（`dfm palette`）** — 从任意电影剧照、海报或色卡一键提取 OKLCH 色彩角色、60-30-10 饱和度分布、`*-palette.png` 色卡图与可直接引用的 `*-theme.css`。
 4. **按需引入的电影光学与物理动效工具箱（`runtime/`）**：
    - `dfm-time.js` — 确定性严格 `[0, 1]` 端点保护缓动、`defineShot()`、`seg()`、`hash()`、`lerpColor()`，外加 4 个零风格偏好物理动效原语（`anticipationPop` 蓄力过冲、`whipPan` 甩镜联动模糊色散、`portalZoom` 穿屏推拉、`ambientDrift` 停留呼吸漂移）

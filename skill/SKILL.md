@@ -7,7 +7,7 @@ description: >-
   microscope with anti-slide & zero-crash QA, and native sound design.
 ---
 
-# dfm-kit v0.5 — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v0.6 — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies).
 
@@ -83,13 +83,17 @@ Copy only what you need into the project directory & import via `./`:
    - **Never** stack isolated full-screen `.beat` / `.slide` boxes at `inset: 0` and toggle them via `display: none` or `visibility: hidden` (even with a fake color wipe overlaid on top). That architecture physically forces a slide-deck feel.
    - **Instead**, build ONE continuous spatial world (`<div id="world">` placed at real `(x, y, z, rx, ry, rz)` coordinates flown by `createWorldCamera`, or ONE persistent Canvas/SVG world where the hero object/camera continuously dives, pans, orbits, or morphs across space).
    - **Never reuse one master-slide CSS layout** (e.g. identical left-title + right-widget coordinates across beats). Vary visual geometry and framing dramatically from beat to beat (macro detail -> angled 3D perspective -> full-bleed oversized type -> tight portal dive -> wide architectural resolve).
-4. **Product Intro / Showcase Anti-Catalog Rule**:
+4. **Truth to Medium (Zero Cheap Faux-3D or Fake Gradients)**:
+   - **Use 3D for Camera & Spatial Depth — NOT Fake CSS Props**: Keep individual planes honest, crisp, matte, and architectural (pure OKLCH solid fills, razor-sharp `1px` hairline borders, bold geometric vectors, authentic cast typography) flying inside real 3D camera space (`createWorldCamera`).
+   - **Never Fake Real Materials with CSS Gradients**: Do NOT use `conic-gradient` to imitate brushed metal, diagonal white `#fff...transparent` streaks to imitate glossy glass/plastic, `radial-gradient` balls to imitate 3D spheres, or thick 0-blur offset `box-shadow` hacks (`15px 20px 0`) to fake slab thickness.
+   - **Use Real Assets When Realism or Tactile Texture Is Needed**: For film grain, paper fiber, or halftone, use `dfm-craft.css` or real scans in `textures/web/`. When the story genuinely calls for a photorealistic object, physical lens, sculpture, or real-world scene, pull or generate a real raster image via OpenFilm (`openfilm get my-media --kind image` / `openfilm get image`) and stage it inside the 3D camera world instead of hand-coding a janky faux-3D CSS/SVG model.
+5. **Product Intro / Showcase Anti-Catalog Rule**:
    - When asked for a product/project **intro**, **never** map features 1-to-1 into slow 4–5s catalog slides ("Feature 1 slide -> Feature 2 slide -> Logo").
    - Instead, direct a **high-velocity 10–18s continuous visual story or transformation** (average **1.2–2.4s per beat**): e.g., a live *Before -> Deconstruction/Transformation -> After* arc, or a single-take camera flight diving directly inside one living workspace/instrument. Keep every held beat subtly alive with `ambientDrift` and stagger secondary motion by 60–90ms.
    - **Optional Cinema Director's Menu (reach for 1–2 when fitting — never mandatory)**: directional `lens.motionBlur` / `lens.rgbSplit` on high-velocity moves, `lens.impactShake` on punch cuts, `lens.fisheye` / `lens.flutedGlass` / `lens.filmBurn` for optical signature, softly defocused foreground parallax occluders, or an optional tonal polarity shift at the narrative climax.
-5. **Pure Cinema Frame**: Treat the viewport as a cinema screen rather than a slide deck. Keep only the narrative subject, visual metaphors, and expressive hero copy — omit corner page counters, numbered section eyebrows, and decorative slide headers/footers.
-6. **Single-Track Captions (No Double Subtitles)**: Whenever `film.html` mounts an OpenFilm native caption track (`<track kind="captions" src="...vtt">`), leave verbatim spoken narration to the `.vtt` track. Inside `scene.html`, draw only distilled visual headlines, keywords, metrics, or diagram callouts, and preserve ~18–22% clean breathing room along the bottom caption band.
-7. **OpenFilm Determinism**: Export `window.film = { width, height, duration, ready, frame(t) }`. Never use `requestAnimationFrame`, `Math.random()`, or per-frame layout mutations (`top/left/width/height`). Author `film.html` with native `<section><iframe id="..." src="scene.html" at="0"></iframe></section>` and dedicated `<section>` audio tracks.
+6. **Pure Cinema Frame**: Treat the viewport as a cinema screen rather than a slide deck. Keep only the narrative subject, visual metaphors, and expressive hero copy — omit corner page counters, numbered section eyebrows, and decorative slide headers/footers.
+7. **Single-Track Captions (No Double Subtitles)**: Whenever `film.html` mounts an OpenFilm native caption track (`<track kind="captions" src="...vtt">`), leave verbatim spoken narration to the `.vtt` track. Inside `scene.html`, draw only distilled visual headlines, keywords, metrics, or diagram callouts, and preserve ~18–22% clean breathing room along the bottom caption band.
+8. **OpenFilm Determinism**: Export `window.film = { width, height, duration, ready, frame(t) }`. Never use `requestAnimationFrame`, `Math.random()`, or per-frame layout mutations (`top/left/width/height`). Author `film.html` with native `<section><iframe id="..." src="scene.html" at="0"></iframe></section>` and dedicated `<section>` audio tracks.
 
 ---
 
