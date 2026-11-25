@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "DFM Kit Director Brief (v0.3 — Style-Agnostic)",
+  "title": "DFM Kit Director Brief (v0.4 — Style-Agnostic)",
   "description": "Zero-template production brief grounded in Design for Motion: Concept, Visual World, OKLCH Color Script, and Shot/Beat Pacing. Works for ANY visual style (2D, 3D, hand-drawn, Canvas, WebGL, editorial, collage, abstract).",
   "type": "object",
   "required": ["title", "format", "concept", "colorScript", "shots"],
@@ -41,9 +41,10 @@
       "description": "Free-form visual direction derived purely from content (no preset lock-in).",
       "properties": {
         "medium": { "type": "string", "description": "e.g. 2D editorial vector, hand-drawn Canvas, 3D macro UI, archival print collage, WebGL abstract, etc." },
+        "spatialArchitecture": { "type": "string", "description": "Chosen spatial stage: continuous-world-camera | hero-morph | portal-match-cut | kinetic-typography | tactile-collage | custom" },
         "reduction": { "type": "string", "description": "What this film deliberately refuses or removes." },
         "amplification": { "type": "string", "description": "The 1-2 visual variables amplified into a memorable Visual Pattern." },
-        "continuityMethod": { "type": "string", "description": "How beats connect without feeling like PowerPoint slides." },
+        "continuityMethod": { "type": "string", "description": "How beats connect physically without PowerPoint slide fades." },
         "dos": { "type": "array", "items": { "type": "string" } },
         "donts": { "type": "array", "items": { "type": "string" } }
       }
@@ -97,7 +98,7 @@
           "start": { "type": "number", "minimum": 0 },
           "duration": { "type": "number", "minimum": 0.3 },
           "heroAt": { "type": "number" },
-          "transitionOut": { "type": "string" }
+          "transitionOut": { "type": "string", "description": "Concrete physical bridge into the next beat (which element zooms, morphs, whip-pans, or occludes into Beat N+1)." }
         }
       }
     }

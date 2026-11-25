@@ -29,11 +29,11 @@ AI 生成的动效视频常常带有明显的“PPT 感”：明暗发灰发平�
 1. **极速 1 板视觉显微镜（`dfm check`）** — 仅需 ~2–6 秒即可渲染 **1 张高信息密度 `review-board.png`**，一张图看全英雄帧、黑白明度分离（`ΔVal`）、3 帧动效连拍（`MOTION Δ`）、全片与单镜电影色带（Movie Color Barcode）以及安全区越界框（需要 5 张独立高清分板时加 `--full`）。
 2. **全时间轴防崩溃扫帧 + Q1–Q16 质检（`dfm audit`）** — 每次审片自动以 `0.25s` 步长扫完整个时间轴的 `frame(t)`，提前拦截隐藏运行时异常；同时自动检测确定性驱动、GPU 性能、黑白对比度、纯净银幕画幅（拦截 PPT 页码与小数字章节眉标）以及单轨字幕冲突（当挂载了原生 `.vtt` 字幕轨时自动拦截画面内重复手画的口播整句）。
 3. **OKLCH 电影色彩脚本提取器（`dfm palette`）** — 从任意电影剧照、海报或色卡一键提取 OKLCH 色彩角色、60-30-10 饱和度分布、`*-palette.png` 色卡图与可直接引用的 `*-theme.css`。
-4. **按需引入的电影光学与质感工具箱（`runtime/`）**：
-   - `dfm-time.js` — 确定性时间与严格 `[0, 1]` 端点保护缓动（杜绝浮点负零点坑）、`defineShot()`、`seg()`、`hash()`、`lerpColor()`
+4. **按需引入的电影光学与物理动效工具箱（`runtime/`）**：
+   - `dfm-time.js` — 确定性严格 `[0, 1]` 端点保护缓动、`defineShot()`、`seg()`、`hash()`、`lerpColor()`，外加 4 个零风格偏好物理动效原语（`anticipationPop` 蓄力过冲、`whipPan` 甩镜联动模糊色散、`portalZoom` 穿屏推拉、`ambientDrift` 停留呼吸漂移）
    - `dfm-craft.css` — 零素材程序化胶片颗粒、半调网点、Halation 红晕、纸张纤维、暗角与扫描线
    - `dfm-lens.js` — 13 组直接作用于 DOM/SVG 的电影光学滤镜与机位工具（`fisheye` 鱼眼、`motionBlur` 方向动态模糊、`rgbSplit` 色散、`flutedGlass` 长虹玻璃、`tiltShift` 移轴、`anamorphicFlare` 变形宽银幕拉丝、`filmBurn` 胶片烧灼、`stepTime` 抽帧定格、`handheld`、`impactShake`、`gateWeave`、`dollyZoom`、`crashZoom`）
-5. **可移植的 AI 导演 Skill（`skill/SKILL.md`）** — 一条命令即可装入 OpenFilm Studio 或其他 Agent 技能目录，并自动绑定本机仓库路径。
+5. **可移植的 AI 导演 Skill（`skill/SKILL.md`）** — 内置「默认导演调度思维」（物理转场衔接、尺度反差与停留呼吸，绝不锁死背景或风格），一条命令即可装入 OpenFilm Studio 或其他 Agent 技能目录并自动绑定本地仓库路径。
 
 ---
 

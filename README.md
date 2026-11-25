@@ -29,11 +29,11 @@ AI-generated motion videos often look like PowerPoint decks: muddy flat contrast
 1. **1-Board Fast Visual Microscope (`dfm check`)** — Renders **one compact, high-density `review-board.png`** in ~2–6 seconds combining Hero frames, grayscale Value separation (`ΔVal`), 3-frame motion continuity strips (`MOTION Δ`), whole-film & per-shot Movie Color Barcodes, and safe-zone overlays (use `--full` for 5 standalone HD boards).
 2. **Full-Timeline Zero-Crash Sweep & Q1–Q16 QA (`dfm audit`)** — Automatically sweeps `frame(t)` every `0.25s` across the entire duration to catch hidden runtime exceptions, plus guards determinism, GPU performance, grayscale contrast, Pure Cinema Frame (flags unwanted slide pagination & numbered section eyebrows), and single-track captions (detects verbatim double subtitles when native `.vtt` `<track>` captions are mounted).
 3. **OKLCH Filmic Color Script Extractor (`dfm palette`)** — Extract a perceptual OKLCH Color Script (`*-palette.png`, `*-palette.json`, `*-theme.css`) with 60-30-10 chroma analysis from any film still, poster, or palette image.
-4. **Optional Cinema Optics & Craft Toolkit (`runtime/`)** — Copy only what you need:
-   - `dfm-time.js` — Deterministic easing (exact `[0, 1]` endpoint clamping), `defineShot()`, `seg()`, `hash()`, `lerpColor()`
+4. **Optional Cinema Optics & Physical Motion Toolkit (`runtime/`)** — Copy only what you need:
+   - `dfm-time.js` — Deterministic clamped easings, `defineShot()`, `seg()`, `hash()`, `lerpColor()`, plus physical motion primitives (`anticipationPop`, `whipPan` with synced directional blur/RGB split, `portalZoom`, `ambientDrift`)
    - `dfm-craft.css` — Procedural film grain, halftone print, halation, paper fiber, vignette, and scanlines
    - `dfm-lens.js` — 13 live DOM/SVG optical filters & camera rigs (`fisheye`, `motionBlur`, `rgbSplit`, `flutedGlass`, `tiltShift`, `anamorphicFlare`, `filmBurn`, `stepTime`, `handheld`, `impactShake`, `gateWeave`, `dollyZoom`, `crashZoom`)
-5. **Portable Agent Director Skill (`skill/SKILL.md`)** — One command installs the portable director skill with your local repo path bound automatically.
+5. **Portable Agent Director Skill (`skill/SKILL.md`)** — One command installs the portable director skill with Default Director Choreography (physical beat bridges, scale contrast, living holds — zero background/style lock-in) and binds your local repo path automatically.
 
 ---
 

@@ -335,6 +335,10 @@ export function runAudit(projectDir) {
           const noFilm = board.shots.filter((s) => !s.hasFilm);
           const blankEntry = board.shots.filter((s) => s.entryPixels && s.entryPixels.valueDynamicRange < 10 && s.entryPixels.meanLuma < 10);
           const rtErrs = board.runtimeErrors || [];
+          const hasFilmHtml = fs.existsSync(filmHtmlPath);
+          const filmHtmlContent = hasFilmHtml ? fs.readFileSync(filmHtmlPath, "utf8") : "";
+          const audioCount = (filmHtmlContent.match(/<audio\b/gi) || []).length;
+          const missingAudio = hasFilmHtml && audioCount === 0 && brief?.silent !== true;
           if (noFilm.length) {
             status = "Blocker";
             notes.push(...noFilm.map((s) => `${s.id} does not export window.film.frame(t)`));
@@ -347,8 +351,16 @@ export function runAudit(projectDir) {
             if (status !== "Blocker") status = "Fix";
             notes.push(...blankEntry.map((s) => `${s.id} opening frame is nearly pure black`));
           }
-          if (!noFilm.length && !rtErrs.length && !blankEntry.length) {
-            notes.push("window.film.frame(t) exported, full-timeline 0.25s sweep 0 errors, non-blank opening frame");
+          if (missingAudio) {
+            if (status !== "Blocker") status = "Fix";
+            notes.push(
+              "film.html has 0 <audio> tracks — unless the user explicitly asked for a silent video (set brief.silent=true), add frame-synced SFX & restrained music via OpenFilm CLI (openfilm get sfx-search / music-search --take)"
+            );
+          }
+          if (!noFilm.length && !rtErrs.length && !blankEntry.length && !missingAudio) {
+            notes.push(
+              `window.film.frame(t) exported, full-timeline 0.25s sweep 0 errors, non-blank opening frame${hasFilmHtml ? `, ${audioCount} audio track(s) mounted` : ""}`
+            );
           }
         } else {
           status = "Review";

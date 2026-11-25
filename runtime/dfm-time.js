@@ -1,5 +1,5 @@
 /**
- * dfm-time.js (v0.3.1) — Zero-Opinion Deterministic Time, Easing & Color Math for OpenFilm
+ * dfm-time.js (v0.4.0) — Zero-Opinion Deterministic Time, Easing, Motion Primitives & Color Math
  * Completely style-agnostic: works equally well with 2D SVG, Canvas, WebGL, CSS, or collage.
  * Zero rAF, zero Math.random(), zero visual defaults.
  * Exact endpoint guards (t<=0 => 0, t>=1 => 1) prevent IEEE-754 negative-epsilon bugs in Canvas arc().
@@ -104,6 +104,123 @@ export const ease = {
   inOutExpo: expoInOut,
   outBack: backOut
 };
+
+/* ============================================================================
+ * Pure-Physics Motion Primitives (v0.4 — Style-Agnostic)
+ * ============================================================================ */
+
+/**
+ * anticipationPop(t, at, dur, { overshoot })
+ * Crisp non-negative pop-in curve: fast launch -> subtle overshoot -> dampened settle.
+ * Strictly 0 at t<=at, strictly 1 at t>=at+dur, and always >= 0 (safe for Canvas arc() radii).
+ */
+export function anticipationPop(t, at, dur = 0.52, { overshoot = 0.08 } = {}) {
+  const p = invLerp(at, at + dur, t);
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  if (p < 0.58) {
+    return (1 + overshoot) * expoOut(p / 0.58);
+  }
+  if (p < 0.82) {
+    const q = (p - 0.58) / 0.24;
+    return lerp(1 + overshoot, 1 - overshoot * 0.26, cubicInOut(q));
+  }
+  const q = (p - 0.82) / 0.18;
+  return lerp(1 - overshoot * 0.26, 1, cubicOut(q));
+}
+
+/**
+ * whipPan(t, cutAt, dur, { distance, axis, maxBlur, maxRgb, anticipation })
+ * Physical whip-pan transition centered at cutAt:
+ * subtle anticipation pull-back -> peak-velocity whip -> crisp settle,
+ * returning synced offsets plus directional motionBlur & rgbSplit intensities.
+ */
+export function whipPan(
+  t,
+  cutAt,
+  dur = 0.36,
+  { distance = 1080, axis = "x", maxBlur = 28, maxRgb = 4, anticipation = 0.045 } = {}
+) {
+  const start = cutAt - dur * 0.5;
+  const end = cutAt + dur * 0.5;
+  if (t <= start) {
+    return { progress: 0, offset: 0, outOffset: 0, inOffset: distance, blurX: 0, blurY: 0, rgbPx: 0, velocity: 0, active: false };
+  }
+  if (t >= end) {
+    return { progress: 1, offset: distance, outOffset: -distance, inOffset: 0, blurX: 0, blurY: 0, rgbPx: 0, velocity: 0, active: false };
+  }
+  const p = (t - start) / dur;
+  let u;
+  if (p < 0.15) {
+    u = -anticipation * Math.sin((p / 0.15) * Math.PI * 0.5);
+  } else {
+    const q = (p - 0.15) / 0.85;
+    u = lerp(-anticipation, 1, expoInOut(q));
+  }
+  // Bell velocity curve peaking right across cutAt
+  const velocity = Math.pow(Math.sin(p * Math.PI), 2.2);
+  const offset = u * distance;
+  const blur = Number((velocity * maxBlur).toFixed(2));
+  return {
+    progress: p,
+    offset,
+    outOffset: -offset,
+    inOffset: distance - offset,
+    blurX: axis === "y" ? 0 : blur,
+    blurY: axis === "y" ? blur : 0,
+    rgbPx: Number((velocity * maxRgb).toFixed(2)),
+    velocity,
+    active: true
+  };
+}
+
+/**
+ * portalZoom(t, cutAt, dur, { maxScale, inStartScale })
+ * Exponential push-through portal transition centered at cutAt.
+ * Scales an outgoing anchor through the lens while revealing the incoming world out of the portal.
+ */
+export function portalZoom(t, cutAt, dur = 0.5, { maxScale = 12, inStartScale = 0.24 } = {}) {
+  const start = cutAt - dur * 0.5;
+  const end = cutAt + dur * 0.5;
+  if (t <= start) {
+    return { progress: 0, outScale: 1, outOpacity: 1, inScale: inStartScale, inOpacity: 0, active: false };
+  }
+  if (t >= end) {
+    return { progress: 1, outScale: maxScale, outOpacity: 0, inScale: 1, inOpacity: 1, active: false };
+  }
+  const p = (t - start) / dur;
+  const outScale = Math.pow(maxScale, expoIn(p));
+  const outOpacity = 1 - smoothStep(0.45, 0.78, p);
+  const inOpacity = smoothStep(0.35, 0.72, p);
+  const inScale = lerp(inStartScale, 1, expoOut(clamp01((p - 0.25) / 0.75)));
+  return { progress: p, outScale, outOpacity, inScale, inOpacity, active: true };
+}
+
+function smoothStep(edge0, edge1, x) {
+  const u = clamp01((x - edge0) / (edge1 - edge0));
+  return u * u * (3 - 2 * u);
+}
+
+/**
+ * ambientDrift(t, seed, { ampX, ampY, ampScale, ampRot, speed })
+ * Subtle deterministic living micro-motion for held shots (eliminates lifeless static holds).
+ */
+export function ambientDrift(
+  t,
+  seed = 1,
+  { ampX = 8, ampY = 6, ampScale = 0.014, ampRot = 0.35, speed = 0.45 } = {}
+) {
+  const ph1 = hash(seed * 13.7) * Math.PI * 2;
+  const ph2 = hash(seed * 29.3) * Math.PI * 2;
+  const ph3 = hash(seed * 47.9) * Math.PI * 2;
+  const w = t * speed * Math.PI * 2;
+  return {
+    x: Math.sin(w * 0.41 + ph1) * ampX + Math.sin(w * 0.19 + ph2) * (ampX * 0.35),
+    y: Math.cos(w * 0.33 + ph2) * ampY + Math.sin(w * 0.23 + ph3) * (ampY * 0.3),
+    scale: 1 + Math.sin(w * 0.27 + ph3) * ampScale,
+    rotDeg: Math.sin(w * 0.21 + ph1) * ampRot
+  };
+}
 
 export function lerpColor(hexA, hexB, t) {
   const p = clamp(t, 0, 1);
