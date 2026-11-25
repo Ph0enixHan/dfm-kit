@@ -49,9 +49,12 @@ export const ease = {
   whipOut: (t) => Math.pow(t, 5),
   /** Subtle tactile overshoot */
   backOut: (t) => {
+    const x = clamp(t, 0, 1);
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
     const c1 = 1.35;
     const c3 = c1 + 1;
-    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    return Math.max(0, 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2));
   }
 };
 

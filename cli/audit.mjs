@@ -73,6 +73,20 @@ function scanShotSource(filePath) {
     });
   }
 
+  // Detect slide-deck DOM switcher architecture (multiple full-screen .beat/.slide sections toggled via display:none / visibility:hidden)
+  const slideSectionCount = (src.match(/class=["'][^"']*\b(beat|slide|card-scene)\b[^"']*["']/gi) || []).length;
+  const usesVisibilityToggle =
+    /\.style\.(visibility|display)\s*=\s*[^;\n]*(hidden|none)/i.test(src) ||
+    /\.(beat|slide)\s*\{[^}]*(display\s*:\s*none|visibility\s*:\s*hidden)/i.test(src);
+  const hasWorldCam = /createWorldCamera|worldEl|id=["']world["']|camAt|camera\.apply/i.test(src);
+  if (slideSectionCount >= 4 && usesVisibilityToggle && !hasWorldCam) {
+    issues.push({
+      rule: "Q11",
+      level: "Fix",
+      msg: `Slide-switcher DOM architecture detected (${slideSectionCount} isolated full-screen sections toggled via display:none/visibility:hidden with no continuous world camera) — place beats inside one shared spatial world or continuously morphing hero stage instead of swapping slide boxes`
+    });
+  }
+
   return issues;
 }
 
@@ -285,10 +299,18 @@ export function runAudit(projectDir) {
       case "Q11": {
         if (status !== "Blocker" && board) {
           const staticBeats = board.shots.filter((s) => typeof s.motionDelta === "number" && s.motionDelta < 0.8);
+          const sluggishLongBeats = board.shots.filter(
+            (s) => typeof s.motionDelta === "number" && s.duration >= 3.5 && s.motionDelta >= 0.8 && s.motionDelta < 3.2
+          );
           if (staticBeats.length) {
             status = "Fix";
             notes.push(
               ...staticBeats.map((s) => `${s.id} inter-frame pixel delta is only Δ${s.motionDelta} (possible static slide — check review-board.png)`)
+            );
+          } else if (sluggishLongBeats.length >= 2) {
+            status = "Fix";
+            notes.push(
+              `${sluggishLongBeats.length} long beats (>=3.5s) have low motion delta (${sluggishLongBeats.map((s) => `${s.id}:Δ${s.motionDelta}`).join(", ")}) — tighten pacing or add continuous camera/subject motion so beats don't sit like held slides`
             );
           } else if (!notes.length) {
             const avgDelta = (board.shots.reduce((a, s) => a + (s.motionDelta || 0), 0) / board.shots.length).toFixed(1);

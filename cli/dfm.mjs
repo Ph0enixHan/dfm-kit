@@ -22,7 +22,7 @@ const isFull = flags.has("--full");
 
 function printHelp() {
   console.log(`
-dfm-kit v0.4 — Style-agnostic Design-for-Motion visual microscope & Color Script CLI for programmatic video
+dfm-kit v0.5 — Style-agnostic Design-for-Motion visual microscope & Color Script CLI for programmatic video
 
 Usage:
   node cli/dfm.mjs check         <projectDir> [--full]    Render fast 1-board review-board.png + Q1-Q16 audit (--full for 5 HD boards)
