@@ -7,15 +7,16 @@ description: >-
   microscope with anti-slide & zero-crash QA, and native sound design.
 ---
 
-# dfm-kit v0.6 — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v0.6.1 — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies).
 
-> **Fast Execution Rules (Saves 70%+ Turn Time — Read First)**
+> **Fast Execution Rules (Saves 70%+ Turn Time Without Sacrificing Craft)**
 > 1. **Start immediately — do not browse the toolkit repo**: All CLI commands, verified runtime signatures, and font castings are inlined below. Do **not** inspect `cli/` source files or unrelated directories.
-> 2. **Prefer single-file `scene.html` continuous-world architecture**: Drive all beats of a film from one `scene.html` inside ONE shared spatial world (`#world` moved by a real camera, or a persistent morphing hero stage) so fonts load once and transitions are physical camera motion — never slide switching.
-> 3. **1-Board Fast Visual Review**: Run `dfm check` to generate **one all-in-one `dfm-out/review-board.png`** (Hero frame + Grayscale Value + 3-frame Motion Strip + Movie Color Barcode + Safe Zone + 0.25s full-timeline crash sweep + audio check). Read only that 1 image; use 1–2s `dfm snap` for targeted re-checks after local edits.
-> 4. **Never run `dfm preview` inside OpenFilm Studio**: Studio provides native real-time playback. If your working directory is already inside `OpenFilm/Projects/`, skip `to-openfilm` as well.
+> 2. **Voiceover-First eliminates rework**: If the video has spoken narration, generate TTS **first** and build `brief.json` & `scene.html` directly to its real timestamps in one clean pass — never build picture first and stretch audio afterward.
+> 3. **Prefer single-file `scene.html` continuous-world architecture**: Drive all beats of a film from one `scene.html` inside ONE shared spatial world (`#world` moved by a real camera, or a persistent morphing hero stage) so fonts load once and transitions are physical camera motion — never slide switching.
+> 4. **1-Board Fast Visual Review**: Run `dfm check` to generate **one all-in-one `dfm-out/review-board.png`** (Hero frame + Grayscale Value + 3-frame Motion Strip + Movie Color Barcode + Safe Zone + 0.25s full-timeline crash sweep + audio check). Read only that 1 image; use 1–2s `dfm snap` for targeted re-checks after local edits.
+> 5. **Never run `dfm preview` inside OpenFilm Studio**: Studio provides native real-time playback. If your working directory is already inside `OpenFilm/Projects/`, skip `to-openfilm` as well.
 
 ---
 
@@ -97,25 +98,27 @@ Copy only what you need into the project directory & import via `./`:
 
 ---
 
-## 4. Standard 4-Step Production Loop (Sound Included by Default)
+## 4. Standard 4-Step Production Loop (Audio-First & Zero Rework)
 
-### Step 1: Write a Concise Director Brief (`brief.json`)
-Declare `title`, `format: { width, height, aspect, fps }`, `concept: { oneLineTreatment, emotion, tensionPair }`, `visualWorld: { medium, spatialArchitecture, continuityMethod }`, `colorScript: { harmony, roles, colorArc }`, and `shots: [{ id, file, role, shotType, focalPoint, energy, start, duration, heroAt, transitionOut }]`. (Only set `"silent": true` if the user explicitly requested a silent piece.)
+### Step 1: Lock Real Audio Timing (if narrated) + Write Concise Director Brief (`brief.json`)
+- **If the film has spoken narration / voiceover**: Generate the voiceover **first** (`openfilm get tts` or user audio), read its real duration and caption timestamps, and lock `brief.json`'s total duration and beat timestamps (`start` / `duration`) directly to the real voiceover (`speed` stays `1.0` — never stretch/compress narration with `speed="0.77"`).
+- Write `brief.json` declaring `title`, `format: { width, height, aspect, fps }`, `concept: { oneLineTreatment, emotion, tensionPair }`, `visualWorld: { medium, spatialArchitecture, continuityMethod }`, `colorScript: { harmony, roles, colorArc }`, and `shots: [{ id, file, role, shotType, focalPoint, energy, start, duration, heroAt, transitionOut }]`. (Only set `"silent": true` if the user explicitly requested a silent piece.)
 
 ### Step 2: Build the Continuous World (`scene.html` + `film.html`)
 Build a single deterministic `scene.html` using `createWorldCamera` / persistent spatial stage (copy only needed `./dfm-motion.js`, `./dfm-time.js`, `./dfm-lens.js`, or `./dfm-craft.css` locally).
 
-### Step 3: Mandatory Default Sound Design & Music Assembly (`film.html`)
-**Do NOT skip sound even when the user does not mention audio.** Every video needs frame-synced SFX and restrained music unless the user explicitly requested silence (free local CC0 library first — zero credits):
+### Step 3: Mandatory Default Sound Design & Continuous Bed (`film.html`)
+**Do NOT skip sound even when the user does not mention audio.** Every video needs a continuous sound bed plus frame-synced SFX unless the user explicitly requested silence (free local CC0 library first — zero credits):
 1. **Call OpenFilm CLI** (`openfilm`; on Windows if not on PATH, fall back to `node "$env:LOCALAPPDATA\Programs\OpenFilm\resources\app.asar.unpacked\node_modules\openfilm\bin\openfilm.mjs"`):
    - Check user media first: `openfilm get my-media --kind audio --prompt "<keywords>"`
    - Search OpenFilm's free built-in CC0 offline library (instant, zero credits):
      - `openfilm get sfx-search --prompt "<whoosh / impact / click / film / paper>"` -> `--take <id>` into `assets/`
      - `openfilm get music-search --prompt "<mood keywords>"` -> `--take <id>` into `assets/`
    - If unavailable locally and the user has connected audio generation in Studio, use `openfilm get sfx` / `openfilm get music`.
-2. **Mount Audio on Dedicated `<section>` Tracks in `film.html`**:
-   - Sync transition whooshes, hits, and UI clicks to exact action timestamps (`at="1.9" volume="0.40-0.58"`), avoiding overlapping loud peaks.
-   - Put background music on its own `<section>` with restrained gain (`volume="0.12-0.16"` under voiceover, `0.32-0.45` for music-only intros); trim with `#t=start,end` as needed.
+2. **Mount Audio Cleanly on Dedicated `<section>` Tracks in `film.html`**:
+   - **Continuous bed (`at="0"`)**: Run one low-gain music or subtle ambient bed spanning `0` to the full film duration (`volume="0.12-0.16"` under voiceover, `0.30-0.44` for music-only intros) — verify the source clip is long enough so audio never drops out mid-film or leaves abrupt dead-silence gaps between chopped clips.
+   - **Synced SFX**: Align transition whooshes, hits, and UI clicks to exact action timestamps (`at="1.9" volume="0.40-0.58"`), avoiding overlapping loud peaks.
+   - **Natural voiceover speed**: Keep narration at `speed="1"` (omit `speed`); never time-stretch narration to cover mismatched picture length.
 
 ### Step 4: 1-Board Fast Visual + Audio QA Gate & Delivery
 1. Run `node "<DFM_ROOT>/cli/dfm.mjs" check .` (~2–6s). Q11 checks for slide-switcher DOM traps & sluggish holds; Q16 automatically verifies `window.film.frame(t)`, 0.25s full-timeline crash-free execution, and mounted `<audio>` tracks in `film.html`.

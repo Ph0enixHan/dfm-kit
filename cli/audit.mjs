@@ -408,8 +408,46 @@ export function runAudit(projectDir) {
           const rtErrs = board.runtimeErrors || [];
           const hasFilmHtml = fs.existsSync(filmHtmlPath);
           const filmHtmlContent = hasFilmHtml ? fs.readFileSync(filmHtmlPath, "utf8") : "";
-          const audioCount = (filmHtmlContent.match(/<audio\b/gi) || []).length;
+          const audioTags = [...filmHtmlContent.matchAll(/<audio\b([^>]*)>/gi)];
+          const audioCount = audioTags.length;
           const missingAudio = hasFilmHtml && audioCount === 0 && brief?.silent !== true;
+          const audioIssues = [];
+          if (hasFilmHtml && audioCount > 0) {
+            const totalFilmDur = board.shots.reduce((m, s) => Math.max(m, (s.start || 0) + (s.duration || 0)), 0);
+            let maxSpanFromZero = 0;
+            for (const m of audioTags) {
+              const attrs = m[1];
+              const aid = (attrs.match(/\bid=["']([^"']+)["']/i) || [])[1] || "audio";
+              const rawSrc = (attrs.match(/\bsrc=["']([^"']+)["']/i) || [])[1] || "";
+              const at = Number((attrs.match(/\bat=["']([^"']+)["']/i) || [])[1] ?? 0);
+              const speedMatch = attrs.match(/\bspeed=["']([^"']+)["']/i);
+              const filePart = rawSrc.split("#")[0];
+              const fragMatch = rawSrc.match(/#t=([0-9.]+)(?:,([0-9.]+))?/i);
+              if (filePart && !/^https?:/.test(filePart) && !fs.existsSync(path.resolve(absProject, filePart))) {
+                audioIssues.push(`missing audio file "${filePart}" (id=${aid})`);
+              }
+              if (speedMatch) {
+                const sp = Number(speedMatch[1]);
+                if (Number.isFinite(sp) && (sp < 0.9 || sp > 1.15)) {
+                  audioIssues.push(
+                    `audio "${aid}" uses extreme speed="${sp}" — generate voiceover first and align brief/scene duration to its natural length instead of time-stretching`
+                  );
+                }
+              }
+              if (at <= 0.5) {
+                if (fragMatch && fragMatch[2]) {
+                  maxSpanFromZero = Math.max(maxSpanFromZero, Number(fragMatch[2]) - Number(fragMatch[1]));
+                } else if (!fragMatch) {
+                  maxSpanFromZero = Math.max(maxSpanFromZero, totalFilmDur);
+                }
+              }
+            }
+            if (totalFilmDur >= 8 && maxSpanFromZero > 0 && maxSpanFromZero < totalFilmDur * 0.72) {
+              audioIssues.push(
+                `no continuous audio bed spans the full ${totalFilmDur.toFixed(1)}s timeline (longest start-at-0 clip ends at ~${maxSpanFromZero.toFixed(1)}s) — keep a continuous low-gain ambient/music bed to prevent abrupt mid-film audio dropouts`
+              );
+            }
+          }
           if (noFilm.length) {
             status = "Blocker";
             notes.push(...noFilm.map((s) => `${s.id} does not export window.film.frame(t)`));
@@ -428,9 +466,13 @@ export function runAudit(projectDir) {
               "film.html has 0 <audio> tracks — unless the user explicitly asked for a silent video (set brief.silent=true), add frame-synced SFX & restrained music via OpenFilm CLI (openfilm get sfx-search / music-search --take)"
             );
           }
-          if (!noFilm.length && !rtErrs.length && !blankEntry.length && !missingAudio) {
+          if (audioIssues.length) {
+            if (status !== "Blocker") status = "Fix";
+            notes.push(...audioIssues);
+          }
+          if (!noFilm.length && !rtErrs.length && !blankEntry.length && !missingAudio && !audioIssues.length) {
             notes.push(
-              `window.film.frame(t) exported, full-timeline 0.25s sweep 0 errors, non-blank opening frame${hasFilmHtml ? `, ${audioCount} audio track(s) mounted` : ""}`
+              `window.film.frame(t) exported, full-timeline 0.25s sweep 0 errors, non-blank opening frame${hasFilmHtml ? `, ${audioCount} audio track(s) verified` : ""}`
             );
           }
         } else {
