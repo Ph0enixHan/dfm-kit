@@ -4,7 +4,70 @@
 
 **A fast, style-agnostic Design-for-Motion director toolkit, OKLCH Color Script engine, 13-API cinema optical lens kit, and 1-board visual microscope for programmatic video.**
 
-> **Core Philosophy**: Give 100% of visual style freedom back to your story and creative direction — 2D vector, Canvas illustration, WebGL, 3D macro UI, archival print collage, darkroom optics, or kinetic typography. Zero fixed visual templates, zero style lock-in, and zero `npm install` dependencies.
+> **Core Philosophy**: Give 100% of visual style freedom back to your story and creative direction — 2D vector, Canvas illustration, WebGL, 3D spatial camera, archival print collage, or kinetic typography. Zero fixed visual templates, zero style lock-in, and zero `npm install` dependencies.
+
+---
+
+## How It Works — The 6-Step DFM Pipeline
+
+`dfm-kit` replaces trial-and-error slide generation with a deterministic, visual-feedback **6-step Design-for-Motion loop**:
+
+```mermaid
+flowchart LR
+  S1["1. Color Script\n(dfm palette)"] --> S2["2. Director Brief\n(brief.json)"]
+  S2 --> S3["3. Continuous World\n(scene.html + optics)"]
+  S3 --> S4["4. 1-Board QA Gate\n(dfm check)"]
+  S4 --> S5["5. Fast Polish\n(dfm snap)"]
+  S5 --> S6["6. Sound & Delivery\n(film.html / Studio)"]
+```
+
+### Step 1 · Color Script Extraction (`dfm palette`)
+Drop **any reference color card, poster, or film still** and run `node cli/dfm.mjs palette <image>`.
+`dfm-kit` quantizes real pixel area proportions in perceptual **OKLCH** space and outputs a visual swatch card (`*-palette.png`), structured JSON roles (`*-palette.json`), and drop-in CSS variables (`*-theme.css`) — locking in a disciplined **60-30-10 chroma budget** before a single pixel of the video is drawn.
+
+![OKLCH Color Script Extractor](./docs/images/01-palette-extractor.png)
+
+### Step 2 · Style-Free Director Brief (`brief.json`)
+Before writing HTML, the agent commits to a concise `brief.json` declaring:
+- **Concept Tension Pair** (e.g., *Enclosed Cabin <-> Expanded Field of View*, *Competing Demands <-> Uninterrupted Thought*)
+- **Spatial Architecture** (`continuous-world-camera`, `hero-morph`, `portal-match-cut`, `kinetic-typography`, or `tactile-collage`)
+- **OKLCH Color Script & Curated Google Fonts Casting** (`spec/fonts.json`)
+- **Concrete Per-Beat Physical Transitions (`transitionOut`)** — specifying how each beat physically leads into the next instead of fading to blank slides.
+
+### Step 3 · Continuous-World Staging & Cinema Optics (`scene.html` + `runtime/`)
+All beats live inside **one continuous spatial world** (driven by `createWorldCamera()` in `runtime/dfm-motion.js` or a persistent morphing canvas — never isolated `display: none` slide boxes).
+Guided by **Truth to Medium**, surfaces stay crisp, matte, and architectural (zero cheap faux-3D CSS gradients), enhanced on demand with physical motion primitives (`anticipationPop`, `whipPan`, `portalZoom`, `ambientDrift`) and **13 live DOM/SVG optical lenses** in `runtime/dfm-lens.js`:
+
+![Cinema Optical Lens Kit: Fisheye, Directional Motion Blur, RGB Split, Tilt-Shift](./docs/images/02-cinema-lenses.png)
+
+### Step 4 · 1-Board Fast Visual Microscope & Automated QA (`dfm check`)
+In **~2–6 seconds**, `dfm check` renders **one compact, high-density `review-board.png`** combining Hero frames, Grayscale Value separation (`ΔVal`), 3-frame Motion Strips (`MOTION Δ`), whole-film & per-shot Movie Color Barcodes, and Safe-Zone overlays (pass `--full` for 5 standalone HD boards).
+
+At the same time, **`dfm audit`** runs **Q1–Q16 automated QA** — including a **0.25s full-timeline zero-crash sweep** of `frame(t)`, anti-slide DOM architecture detection, Truth-to-Medium faux-3D/gradient checks, Pure Cinema Frame checks (no corner pagination or numbered eyebrows), single-track `.vtt` caption collision checks, and `<audio>` track verification:
+
+![1-Board All-in-One Visual Microscope](./docs/images/03-review-board-16x9.png)
+
+### Step 5 · 1–2s Targeted Frame Polish (`dfm snap`)
+After tweaking a specific beat, run `node cli/dfm.mjs snap scene.html 1.2,4.5,8.5` to inspect exact timestamps and safe-zone geometry in **~1 second** without re-rendering the whole film:
+
+![Instant Multi-Frame Snap Inspector](./docs/images/04-snap-inspector.png)
+
+### Step 6 · Sound Design & Studio Delivery (`film.html` / `dfm to-openfilm`)
+Assemble frame-synced SFX (`whoosh`, `impact`, `latch`) and restrained music tracks via OpenFilm's native CC0 audio library on dedicated `<section>` tracks in `film.html`, verify with `dfm check`, and play back natively in OpenFilm Studio (or sync external projects via `dfm to-openfilm`).
+
+---
+
+## Real Cases Produced with `dfm-kit`
+
+### Case 1 · Editorial Product Launch Teaser (`STILL`, 16:9 · 14s)
+Warm archival cotton paper, matte ink typography, and one restrained vermilion cursor — dozens of overlapping notifications collapse in one physical sweep (`MOTION Δ57.73`, `ΔVal 199`, `SAFE OK`):
+
+![STILL Launch Teaser Review Board](./docs/images/05-case-still-teaser.png)
+
+### Case 2 · One-Sentence Cold-Start Science Explainer (`Why do elevators have mirrors?`, 9:16 · 60s)
+Generated from **a single one-line user prompt** with zero camera, color, or style instructions: a continuous architectural elevator cabin transitions smoothly into an overhead spatial accessibility diagram (`SAFE OK` across all 6 beats, zero slides, zero faux-3D):
+
+![One-Sentence Elevator Mirror Explainer Review Board](./docs/images/06-case-elevator-1line.png)
 
 ---
 
@@ -17,23 +80,6 @@
 | **[OpenFilm](https://openfilm.dev)** | **Supported (Built-in)** | Deterministic `window.film.frame(t)`, `dfm to-openfilm`, Studio skill installer & native CC0 audio workflow |
 | **Hyperframes** | **Planned** | Renderer adapter & deterministic timeline bridge |
 | **Remotion** | **Planned** | React composition frame inspector & Q1–Q16 visual QA adapter |
-
----
-
-## Why `dfm-kit`?
-
-AI-generated motion videos often look like PowerPoint decks: muddy flat contrast, cliché default UI colors, corner pagination (`01 / 06`), double subtitles colliding with native captions, or silent crashes on edge frames.
-
-`dfm-kit` solves this with **5 orthogonal, zero-dependency building blocks** (runs natively on **Node 22+** + local Chrome/Edge via CDP):
-
-1. **1-Board Fast Visual Microscope (`dfm check`)** — Renders **one compact, high-density `review-board.png`** in ~2–6 seconds combining Hero frames, grayscale Value separation (`ΔVal`), 3-frame motion continuity strips (`MOTION Δ`), whole-film & per-shot Movie Color Barcodes, and safe-zone overlays (use `--full` for 5 standalone HD boards).
-2. **Full-Timeline Zero-Crash Sweep & Q1–Q16 QA (`dfm audit`)** — Automatically sweeps `frame(t)` every `0.25s` across the entire duration to catch hidden runtime exceptions, plus guards determinism, GPU performance, grayscale contrast, **anti-slide spatial architecture** (flags `display:none/visibility:hidden` slide-switcher DOMs and sluggish holds), **Truth to Medium** (flags cheap faux-3D CSS extrusions, fake metallic `conic-gradient` hacks, plastic glass glare, and bare system-font fallbacks), Pure Cinema Frame (flags unwanted slide pagination & numbered eyebrows), single-track captions (detects verbatim double subtitles), and mounted `<audio>` tracks.
-3. **OKLCH Filmic Color Script Extractor (`dfm palette`)** — Extract a perceptual OKLCH Color Script (`*-palette.png`, `*-palette.json`, `*-theme.css`) with 60-30-10 chroma analysis from any film still, poster, or palette image.
-4. **Optional Cinema Optics & Physical Motion Toolkit (`runtime/`)** — Copy only what you need:
-   - `dfm-time.js` — Deterministic clamped easings, `defineShot()`, `seg()`, `hash()`, `lerpColor()`, plus physical motion primitives (`anticipationPop`, `whipPan` with synced directional blur/RGB split, `portalZoom`, `ambientDrift`)
-   - `dfm-craft.css` — Procedural film grain, halftone print, halation, paper fiber, vignette, and scanlines
-   - `dfm-lens.js` — 13 live DOM/SVG optical filters & camera rigs (`fisheye`, `motionBlur`, `rgbSplit`, `flutedGlass`, `tiltShift`, `anamorphicFlare`, `filmBurn`, `stepTime`, `handheld`, `impactShake`, `gateWeave`, `dollyZoom`, `crashZoom`)
-5. **Portable Agent Director Skill (`skill/SKILL.md`)** — One command installs the portable director skill with Default Director Choreography (physical beat bridges, scale contrast, living holds — zero background/style lock-in) and binds your local repo path automatically.
 
 ---
 
@@ -53,11 +99,7 @@ node cli/dfm.mjs install-skill
 This installs `skill/SKILL.md` into your OpenFilm Studio `Skills/dfm-kit/` folder (override destination via `DFM_OPENFILM_SKILLS` or pass any agent skills directory as an argument) and binds `<DFM_ROOT>` to your local clone automatically.
 
 ### 2. Direct a Video with Your AI Agent
-Invoke the `dfm-kit` skill and describe your video (optionally attach a reference still or color palette). The agent will:
-1. Extract your palette (if given) and author a style-free `brief.json`
-2. Build a deterministic single-file `scene.html` + timeline manifest (`film.html`)
-3. Run `dfm check` (~2–6s), visually inspect `dfm-out/review-board.png`, and polish localized beats with 1–2s `dfm snap`
-4. Assemble frame-synced SFX & background music
+Invoke the `dfm-kit` skill and describe your video (or even give a single sentence, optionally with a reference color card or film still). The agent automatically executes the 6-step DFM pipeline end-to-end.
 
 ---
 
@@ -83,7 +125,7 @@ dfm-kit/
 ├── cli/
 │   ├── dfm.mjs              # Main CLI entry
 │   ├── board.mjs            # Fast 1-board review renderer + optional 5 HD boards + 0.25s crash sweep
-│   ├── audit.mjs            # Style-agnostic Q1-Q16 QA auditor (pure frame, VTT double-subtitle & value checks)
+│   ├── audit.mjs            # Style-agnostic Q1-Q16 QA auditor (anti-slide, Truth-to-Medium, VTT & audio gates)
 │   ├── snap.mjs             # 1-2s targeted frame inspector
 │   ├── palette.mjs          # OKLCH Color Script extractor from any reference image
 │   ├── color-math.mjs       # sRGB <-> OKLCH color math & filmic role assignment
@@ -93,10 +135,10 @@ dfm-kit/
 │   ├── preview.mjs          # Deterministic 30fps MP4 exporter (headless CLI)
 │   └── textures-prep.mjs    # Optional <=1200px proxy baker for your local CC0 texture packs
 ├── runtime/                 # Optional zero-dependency browser modules (copy on demand)
-│   ├── dfm-time.js          # Deterministic time, clamped easings, hash, defineShot()
+│   ├── dfm-motion.js        # Continuous 3D world camera, radial rig & reveal choreography
+│   ├── dfm-time.js          # Deterministic clamped easings & physical motion primitives
 │   ├── dfm-lens.js          # 13-API cinema optical lens & camera rig
 │   ├── dfm-craft.css        # Procedural grain, halftone, halation, paper fiber, vignette
-│   ├── dfm-motion.js        # Optional 3D world camera & radial rig helpers
 │   └── dfm-stage.css        # Optional multi-plane stage helpers
 ├── spec/
 │   ├── brief.schema.json    # Style-agnostic Director Brief schema
@@ -105,6 +147,7 @@ dfm-kit/
 │   └── continuity-grammar.json # Non-slide spatial & visual continuity grammar
 ├── skill/
 │   └── SKILL.md             # Portable agent director skill
+├── docs/images/             # Verified workflow & real-case screenshots
 └── textures/
     └── README.md            # Guide for optional local CC0 tactile texture packs
 ```

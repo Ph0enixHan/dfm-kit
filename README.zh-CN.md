@@ -4,7 +4,69 @@
 
 **面向代码驱动视频的零风格预设 Design-for-Motion 导演工具箱：OKLCH 色彩脚本引擎、13 组电影光学镜头箱、极速单板视觉显微镜与全时间轴防崩溃质检。**
 
-> **核心理念**：把“画什么风格”的自由 100% 还给内容和创作者（2D 矢量、Canvas 手绘、WebGL、3D 微距界面、印刷拼贴、暗房光学或动态排版统统不限）。零固定视觉模板、零风格锁死、零 `npm install` 外部依赖。
+> **核心理念**：把“画什么风格”的自由 100% 还给内容和创作者（2D 矢量、Canvas 手绘、WebGL、3D 空间运镜、印刷拼贴或动态排版统统不限）。零固定视觉模板、零风格锁死、零 `npm install` 外部依赖。
+
+---
+
+## 工作原理 — DFM 6 步导演闭环（How It Works）
+
+`dfm-kit` 用一套确定性、可视化的 **6 步动态设计导演闭环**，取代盲抽式的 PPT 幻灯片生成：
+
+```mermaid
+flowchart LR
+  S1["1. 提取色彩脚本\n(dfm palette)"] --> S2["2. 撰写导演简报\n(brief.json)"]
+  S2 --> S3["3. 连续空间与光学\n(scene.html + optics)"]
+  S3 --> S4["4. 1 板审片与质检\n(dfm check)"]
+  S4 --> S5["5. 1-2s 局部快查\n(dfm snap)"]
+  S5 --> S6["6. 声效与 Studio 交付\n(film.html / Studio)"]
+```
+
+### 第 1 步 · 放入参考色卡/剧照，提取 OKLCH 色彩脚本（`dfm palette`）
+用户只要附带**任意一张色卡、海报或电影剧照**，运行 `node cli/dfm.mjs palette <图片>`，工具会在感知均匀的 **OKLCH** 空间统计真实面积占比，自动输出**视觉色卡图（`*-palette.png`）**、角色脚本（`*-palette.json`）与可直接引用的 CSS 变量（`*-theme.css`），在动笔写第一行画面代码前就锁定克制的 **60-30-10 色度预算**：
+
+![OKLCH 色彩脚本提取器](./docs/images/01-palette-extractor.png)
+
+### 第 2 步 · 撰写零模板导演简报（`brief.json`）
+写代码前先在 `brief.json` 定清整部片子的导演骨架：
+- **核心概念反义张力**（例如：*封闭轿厢 ↔ 视觉延伸*、*嘈杂通知 ↔ 静谧专注*）
+- **空间舞台架构**（`continuous-world-camera` 连续世界摄影机 / `hero-morph` 主体连续变形 / `portal-match-cut` 穿屏推拉 / `kinetic-typography` / `tactile-collage`）
+- **OKLCH 色彩脚本 + Google Fonts 字体选角**（`spec/fonts.json`）
+- **逐拍具体物理衔接（`transitionOut`）**——写清上一幕哪个具体元素如何衔接进下一幕，从源头杜绝“空白淡入淡出”幻灯片。
+
+### 第 3 步 · 连续空间搭建、物理动效与电影光学（`scene.html` + `runtime/`）
+所有节拍共存于**同一个连续空间舞台**（由 `runtime/dfm-motion.js` 的 `createWorldCamera()` 驱动飞行，或由同一画布上的持续变形主体驱动，绝不用 `display: none` 切页）。
+遵循**「诚实于媒介（Truth to Medium）」**原则：3D 用于真实空间纵深与摄影机运镜，图形表面保持纯粹、哑光、锐利（拒绝假金属 `conic-gradient` 与廉价塑料反光渐变），按需叠加 `dfm-time.js` 物理动效原语（`anticipationPop`、`whipPan`、`portalZoom`、`ambientDrift`）与 **`runtime/dfm-lens.js` 的 13 组实时 DOM/SVG 电影光学镜头**：
+
+![电影光学镜头箱：鱼眼、方向动态模糊、RGB 色散、移轴浅景深](./docs/images/02-cinema-lenses.png)
+
+### 第 4 步 · 1 板极速视觉显微镜 + 全轴防崩溃质检（`dfm check`）
+仅需 **2~6 秒** 即可输出 **1 张高信息密度 `review-board.png`**，一图看全英雄帧、黑白明度分离（`ΔVal`）、3 帧动效连拍（`MOTION Δ`）、全片/单镜电影色带（Movie Color Barcode）与安全区越界框（需要 5 张独立高清板时加 `--full`）。
+
+同时 **`dfm audit`** 自动执行 **Q1–Q16 质检**——包括 **0.25s 全时间轴扫帧防崩溃**、反 PPT 翻页架构检测、诚实于媒介（廉价假 3D 渐变/裸字体拦截）、纯净银幕（拦截角落页码与小数字眉标）、单轨 `.vtt` 双字幕冲突检测以及 `<audio>` 音轨挂载门禁：
+
+![1 板全能视觉显微镜](./docs/images/03-review-board-16x9.png)
+
+### 第 5 步 · 1~2 秒精准帧快查精修（`dfm snap`）
+局部微调后无需重跑全片，执行 `node cli/dfm.mjs snap scene.html 1.2,4.5,8.5`，**约 1 秒**即输出多时间点对照条与安全区数据：
+
+![1 秒多帧快查条](./docs/images/04-snap-inspector.png)
+
+### 第 6 步 · 声效装配与 Studio 实时交付（`film.html` / `dfm to-openfilm`）
+默认通过 OpenFilm 原生本地 CC0 音效/配乐库（零积分秒出），把精准卡点的转场 Whoosh、重击 Impact 与克制配乐挂进 `film.html` 独立 `<section>` 音轨，通过 `dfm check` 终审后直接在 OpenFilm Studio 实时播放（外部目录开发时用 `dfm to-openfilm` 一键同步）。
+
+---
+
+## 真实生成案例展示
+
+### 案例 1 · 极简产品上线预告（`STILL`，16:9 · 14 秒）
+暖棉纸底色 + 哑光墨色排版 + 克制朱红光标——几十条凌乱通知在一次物理清扫中瞬间坍缩为静谧写作画幅（`MOTION Δ57.73`，`ΔVal 199`，`SAFE OK`）：
+
+![STILL 产品预告片审片板](./docs/images/05-case-still-teaser.png)
+
+### 案例 2 · “一句话”盲测 60 秒竖屏科普（`为什么电梯里总装镜子？`，9:16 · 60 秒）
+仅输入**一句极简提示词**（不提运镜、不提配色、不提画风），AI 自动构建出连续的建筑感深青色电梯轿厢空间，镜头平滑升至俯视视角演示轮椅回转半径与后视镜反射视线（6 拍全 `SAFE OK`，零 PPT 感，零廉价假 3D）：
+
+![一句话盲测电梯镜子科普审片板](./docs/images/06-case-elevator-1line.png)
 
 ---
 
@@ -17,23 +79,6 @@
 | **[OpenFilm](https://openfilm.dev)** | **已内置支持** | 确定性 `window.film.frame(t)`、`dfm to-openfilm`、Studio Skill 一键安装与原生 CC0 音效流 |
 | **Hyperframes** | **规划中** | 渲染适配器与确定性时间轴桥接 |
 | **Remotion** | **规划中** | React 合成帧检查器与 Q1–Q16 视觉质检适配器 |
-
----
-
-## 为什么需要 `dfm-kit`？
-
-AI 生成的动效视频常常带有明显的“PPT 感”：明暗发灰发平、廉价软件默认配色、角落分页页码与小数字眉标、和原生字幕撞车的双字幕，或者在某个边缘帧静默抛异常导致画面缺失。
-
-`dfm-kit` 用 **5 块完全正交、零依赖的开源基础设施**系统性解决这些问题（仅需本机 **Node 22+** 与 Chrome/Edge）：
-
-1. **极速 1 板视觉显微镜（`dfm check`）** — 仅需 ~2–6 秒即可渲染 **1 张高信息密度 `review-board.png`**，一张图看全英雄帧、黑白明度分离（`ΔVal`）、3 帧动效连拍（`MOTION Δ`）、全片与单镜电影色带（Movie Color Barcode）以及安全区越界框（需要 5 张独立高清分板时加 `--full`）。
-2. **全时间轴防崩溃扫帧 + Q1–Q16 质检（`dfm audit`）** — 每次审片自动以 `0.25s` 步长扫完整个时间轴的 `frame(t)`，提前拦截隐藏运行时异常；同时自动检测确定性驱动、GPU 性能、黑白对比度、**反 PPT 翻页架构**（拦截 `display:none/visibility:hidden` 切页盒子与过长静帧）、**诚实于媒介**（拦截廉价假金属 `conic-gradient`、塑料反光渐变、硬阴影假立体厚度与裸系统字体敷衍）、纯净银幕画幅（拦截页码与小数字眉标）、单轨字幕冲突以及 `film.html` 音轨挂载。
-3. **OKLCH 电影色彩脚本提取器（`dfm palette`）** — 从任意电影剧照、海报或色卡一键提取 OKLCH 色彩角色、60-30-10 饱和度分布、`*-palette.png` 色卡图与可直接引用的 `*-theme.css`。
-4. **按需引入的电影光学与物理动效工具箱（`runtime/`）**：
-   - `dfm-time.js` — 确定性严格 `[0, 1]` 端点保护缓动、`defineShot()`、`seg()`、`hash()`、`lerpColor()`，外加 4 个零风格偏好物理动效原语（`anticipationPop` 蓄力过冲、`whipPan` 甩镜联动模糊色散、`portalZoom` 穿屏推拉、`ambientDrift` 停留呼吸漂移）
-   - `dfm-craft.css` — 零素材程序化胶片颗粒、半调网点、Halation 红晕、纸张纤维、暗角与扫描线
-   - `dfm-lens.js` — 13 组直接作用于 DOM/SVG 的电影光学滤镜与机位工具（`fisheye` 鱼眼、`motionBlur` 方向动态模糊、`rgbSplit` 色散、`flutedGlass` 长虹玻璃、`tiltShift` 移轴、`anamorphicFlare` 变形宽银幕拉丝、`filmBurn` 胶片烧灼、`stepTime` 抽帧定格、`handheld`、`impactShake`、`gateWeave`、`dollyZoom`、`crashZoom`）
-5. **可移植的 AI 导演 Skill（`skill/SKILL.md`）** — 内置「默认导演调度思维」（物理转场衔接、尺度反差与停留呼吸，绝不锁死背景或风格），一条命令即可装入 OpenFilm Studio 或其他 Agent 技能目录并自动绑定本地仓库路径。
 
 ---
 
@@ -53,11 +98,7 @@ node cli/dfm.mjs install-skill
 该命令会自动将 `skill/SKILL.md` 写入本机 OpenFilm Studio 的 `Skills/dfm-kit/` 目录（也可通过 `DFM_OPENFILM_SKILLS` 或命令行参数指定任意技能目录），并自动绑定本地仓库路径。
 
 ### 2. 用 AI 导演成片
-在你的项目里调用 `dfm-kit` 技能并描述视频内容（可选附带参考剧照或色卡），AI 会自动完成：
-1. 提取参考配色（如有）并撰写零风格限制的 `brief.json` 导演简报
-2. 优先采用单文件 `scene.html` + 时间轴文件（如 `film.html`）构建确定性动态画面
-3. 运行 `dfm check`（~2–6 秒）查看 `review-board.png` 与 Q1–Q16 报告，并用 1–2 秒的 `dfm snap` 局部精修
-4. 装配精准卡点的音效与克制配乐
+在你的项目里调用 `dfm-kit` 技能并描述视频内容（甚至只给一句话，可选附带参考剧照或色卡），AI 会自动跑完上述 6 步导演闭环。
 
 ---
 
