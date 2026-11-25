@@ -7,7 +7,7 @@ description: >-
   microscope with anti-slide & zero-crash QA, and native sound design.
 ---
 
-# dfm-kit v0.6.1 — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v0.7 — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies).
 
@@ -93,8 +93,14 @@ Copy only what you need into the project directory & import via `./`:
    - Instead, direct a **high-velocity 10–18s continuous visual story or transformation** (average **1.2–2.4s per beat**): e.g., a live *Before -> Deconstruction/Transformation -> After* arc, or a single-take camera flight diving directly inside one living workspace/instrument. Keep every held beat subtly alive with `ambientDrift` and stagger secondary motion by 60–90ms.
    - **Optional Cinema Director's Menu (reach for 1–2 when fitting — never mandatory)**: directional `lens.motionBlur` / `lens.rgbSplit` on high-velocity moves, `lens.impactShake` on punch cuts, `lens.fisheye` / `lens.flutedGlass` / `lens.filmBurn` for optical signature, softly defocused foreground parallax occluders, or an optional tonal polarity shift at the narrative climax.
 6. **Pure Cinema Frame**: Treat the viewport as a cinema screen rather than a slide deck. Keep only the narrative subject, visual metaphors, and expressive hero copy — omit corner page counters, numbered section eyebrows, and decorative slide headers/footers.
-7. **Single-Track Captions (No Double Subtitles)**: Whenever `film.html` mounts an OpenFilm native caption track (`<track kind="captions" src="...vtt">`), leave verbatim spoken narration to the `.vtt` track. Inside `scene.html`, draw only distilled visual headlines, keywords, metrics, or diagram callouts, and preserve ~18–22% clean breathing room along the bottom caption band.
-8. **OpenFilm Determinism**: Export `window.film = { width, height, duration, ready, frame(t) }`. Never use `requestAnimationFrame`, `Math.random()`, or per-frame layout mutations (`top/left/width/height`). Author `film.html` with native `<section><iframe id="..." src="scene.html" at="0"></iframe></section>` and dedicated `<section>` audio tracks.
+7. **Platform Safe-Zone Discipline (`format.safePreset`)**:
+   - Backgrounds, atmospheric textures, and `data-bleed` graphics fill 100% of the canvas edge-to-edge; keep **all primary headlines, key metrics, and focal subjects** strictly inside the active safe zone:
+     - **`social-strict` (default for 9:16 vertical — TikTok / Reels / Douyin / Xiaohongshu)**: `top 12.5% (240px)`, `right 14% (150px for like/share rail)`, `bottom 22% (420px for captions/HUD)`, `left 6% (65px)` -> safe box `x: 65-930, y: 240-1500` on `1080x1920`.
+     - **`shorts` (when user specifies YouTube Shorts)**: `top 10% (190px)`, `right 11% (120px)`, `bottom 18% (340px)`, `left 5.5% (60px)`.
+     - **`clean` (default for 16:9 / portfolio / no social HUD)**: `top 8%`, `right 6%`, `bottom 8%`, `left 6%`.
+   - `dfm check` draws translucent social-HUD ghost outlines directly onto vertical `review-board.png` frames so you can visually verify zero button/caption overlap.
+8. **Single-Track Captions (No Double Subtitles)**: Whenever `film.html` mounts an OpenFilm native caption track (`<track kind="captions" src="...vtt">`), leave verbatim spoken narration to the `.vtt` track. Inside `scene.html`, draw only distilled visual headlines, keywords, metrics, or diagram callouts inside the safe zone above the bottom caption band.
+9. **OpenFilm Determinism**: Export `window.film = { width, height, duration, ready, frame(t) }`. Never use `requestAnimationFrame`, `Math.random()`, or per-frame layout mutations (`top/left/width/height`). Author `film.html` with native `<section><iframe id="..." src="scene.html" at="0"></iframe></section>` and dedicated `<section>` audio tracks.
 
 ---
 

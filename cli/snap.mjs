@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { launchHeadlessBrowser, startStaticServer } from "./cdp-browser.mjs";
-import { measureShotDom } from "./board.mjs";
+import { measureShotDom, resolveSafeArea } from "./board.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -56,6 +56,7 @@ export async function snapFrames(htmlFileArg, timesArg = "1.0", outArg = null) {
       await browser.setViewport(width, height);
     }
 
+    const safeArea = resolveSafeArea(width, height, brief);
     const outDir = path.join(projectDir, "dfm-out");
     fs.mkdirSync(outDir, { recursive: true });
     const outPath = outArg ? path.resolve(outArg) : path.join(outDir, "snap.png");
@@ -65,7 +66,7 @@ export async function snapFrames(htmlFileArg, timesArg = "1.0", outArg = null) {
       if (info.hasFilm) {
         await browser.evalJS(`window.film.frame(${t}); void document.body.offsetHeight;`);
       }
-      const dom = await measureShotDom(browser, width, height);
+      const dom = await measureShotDom(browser, width, height, safeArea);
       const scale = times.length === 1 ? 0.65 : 0.45;
       const buf =
         times.length === 1

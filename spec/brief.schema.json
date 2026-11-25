@@ -14,6 +14,11 @@
         "height": { "type": "integer", "minimum": 320 },
         "aspect": { "type": "string", "enum": ["16:9", "9:16", "1:1", "4:5", "21:9"] },
         "fps": { "type": "integer", "enum": [24, 25, 30, 60] },
+        "safePreset": {
+          "type": "string",
+          "enum": ["social-strict", "shorts", "clean"],
+          "description": "Platform UI safe-zone preset: 'social-strict' (default for 9:16 — TikTok/Reels/Douyin/Xiaohongshu), 'shorts' (YouTube Shorts), or 'clean' (default for 16:9 / no HUD)."
+        },
         "safeArea": {
           "type": "object",
           "properties": {

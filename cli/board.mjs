@@ -277,16 +277,69 @@ async function computeMotionDelta(browser, imgBuffers, mime = "image/jpeg") {
   })()`);
 }
 
+export const SAFE_PRESETS = {
+  "social-strict": { top: 0.125, right: 0.14, bottom: 0.22, left: 0.06 },
+  shorts: { top: 0.1, right: 0.11, bottom: 0.18, left: 0.055 },
+  clean: { top: 0.08, right: 0.06, bottom: 0.08, left: 0.06 }
+};
+
+export function resolveSafeArea(width, height, brief) {
+  const defaultPreset = height > width ? "social-strict" : "clean";
+  const requested = brief?.format?.safePreset;
+  const preset = requested && SAFE_PRESETS[requested] ? requested : defaultPreset;
+  const ratios = SAFE_PRESETS[preset];
+  const custom = brief?.format?.safeArea || {};
+  return {
+    preset,
+    top: typeof custom.top === "number" ? custom.top : Math.round(height * ratios.top),
+    right: typeof custom.right === "number" ? custom.right : Math.round(width * ratios.right),
+    bottom: typeof custom.bottom === "number" ? custom.bottom : Math.round(height * ratios.bottom),
+    left: typeof custom.left === "number" ? custom.left : Math.round(width * ratios.left)
+  };
+}
+
+function buildSocialHudSvg(thumbW, thumbH, sb, sx, sy, preset) {
+  if (preset !== "social-strict" && preset !== "shorts") return "";
+  const topH = (sb.top * sy).toFixed(1);
+  const rightX = (sb.right * sx).toFixed(1);
+  const rightW = Math.max(0, thumbW - sb.right * sx).toFixed(1);
+  const botY = (sb.bottom * sy).toFixed(1);
+  const botH = Math.max(0, thumbH - sb.bottom * sy).toFixed(1);
+  const railCx = (sb.right * sx + (thumbW - sb.right * sx) * 0.52).toFixed(1);
+  const iconR = Math.max(3.5, Math.min(6, (thumbW - sb.right * sx) * 0.22)).toFixed(1);
+  const iconYs = [0.54, 0.62, 0.70, 0.78].map((f) => (thumbH * f).toFixed(1));
+  const circles = iconYs
+    .map((cy) => `<circle cx="${railCx}" cy="${cy}" r="${iconR}" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.35)" stroke-width="0.8"/>`)
+    .join("");
+  const capX = (sb.left * sx).toFixed(1);
+  const capW1 = ((sb.right - sb.left) * sx * 0.66).toFixed(1);
+  const capW2 = ((sb.right - sb.left) * sx * 0.44).toFixed(1);
+  const capY1 = (sb.bottom * sy + Math.max(6, (thumbH - sb.bottom * sy) * 0.22)).toFixed(1);
+  const capY2 = (sb.bottom * sy + Math.max(13, (thumbH - sb.bottom * sy) * 0.42)).toFixed(1);
+  return `
+    <rect x="0" y="0" width="${thumbW}" height="${topH}" fill="rgba(255,159,10,0.08)"/>
+    <rect x="${rightX}" y="${topH}" width="${rightW}" height="${Math.max(0, sb.bottom * sy - sb.top * sy).toFixed(1)}" fill="rgba(255,159,10,0.09)"/>
+    <rect x="0" y="${botY}" width="${thumbW}" height="${botH}" fill="rgba(255,159,10,0.11)"/>
+    ${circles}
+    <rect x="${capX}" y="${capY1}" width="${capW1}" height="4" rx="2" fill="rgba(255,255,255,0.22)"/>
+    <rect x="${capX}" y="${capY2}" width="${capW2}" height="3.5" rx="1.5" fill="rgba(255,255,255,0.15)"/>
+  `;
+}
+
 /**
  * Style-agnostic DOM geometry check — runs at full native resolution.
  */
-export async function measureShotDom(browser, width, height) {
+export async function measureShotDom(browser, width, height, safeArea = null) {
+  const fallbackTop = safeArea?.top ?? Math.round(height * 0.08);
+  const fallbackRight = safeArea?.right ?? Math.round(width * 0.06);
+  const fallbackBottom = safeArea?.bottom ?? Math.round(height * 0.08);
+  const fallbackLeft = safeArea?.left ?? Math.round(width * 0.06);
   return browser.evalJS(`(() => {
     const rootStyle = getComputedStyle(document.documentElement);
-    const safeTop = parseFloat(rootStyle.getPropertyValue('--safe-top')) || Math.round(${height} * 0.08);
-    const safeRight = parseFloat(rootStyle.getPropertyValue('--safe-right')) || Math.round(${width} * 0.06);
-    const safeBottom = parseFloat(rootStyle.getPropertyValue('--safe-bottom')) || Math.round(${height} * 0.08);
-    const safeLeft = parseFloat(rootStyle.getPropertyValue('--safe-left')) || Math.round(${width} * 0.06);
+    const safeTop = parseFloat(rootStyle.getPropertyValue('--safe-top')) || ${fallbackTop};
+    const safeRight = parseFloat(rootStyle.getPropertyValue('--safe-right')) || ${fallbackRight};
+    const safeBottom = parseFloat(rootStyle.getPropertyValue('--safe-bottom')) || ${fallbackBottom};
+    const safeLeft = parseFloat(rootStyle.getPropertyValue('--safe-left')) || ${fallbackLeft};
 
     const safeBox = {
       left: safeLeft,
@@ -295,17 +348,17 @@ export async function measureShotDom(browser, width, height) {
       bottom: ${height} - safeBottom
     };
 
-    function isEffectivelyVisible(el) {
+    function getEffectiveOpacity(el) {
       let cur = el;
       let accOp = 1;
       while (cur && cur !== document.documentElement) {
         const st = getComputedStyle(cur);
-        if (st.display === 'none' || st.visibility === 'hidden') return false;
+        if (st.display === 'none' || st.visibility === 'hidden') return 0;
         accOp *= parseFloat(st.opacity);
-        if (accOp < 0.08) return false;
+        if (accOp < 0.08) return 0;
         cur = cur.parentElement;
       }
-      return true;
+      return accOp;
     }
 
     const planes = [...document.querySelectorAll('.dfm-plane[data-plane]')].map((el) =>
@@ -322,7 +375,8 @@ export async function measureShotDom(browser, width, height) {
     for (const el of allEls) {
       if (el.closest('.dfm-finishing')) continue;
       if (el.classList.contains('dfm-stage') || el.classList.contains('dfm-camera') || el.classList.contains('dfm-plane') || el.classList.contains('dfm-safe') || el.classList.contains('dfm-world')) continue;
-      if (!isEffectivelyVisible(el)) continue;
+      const effOp = getEffectiveOpacity(el);
+      if (effOp < 0.08) continue;
 
       const planeEl = el.closest('.dfm-plane[data-plane]');
       const planeName = planeEl ? planeEl.getAttribute('data-plane') : 'mg';
@@ -364,8 +418,12 @@ export async function measureShotDom(browser, width, height) {
           box.violation = true;
           viewportClips.push({ label, rect: { x: box.x, y: box.y, w: box.w, h: box.h } });
         }
+        const isHeadline =
+          hasDirectText &&
+          effOp >= 0.45 &&
+          (/^H[1-3]$/.test(el.tagName) || parseFloat(style.fontSize) >= 36);
         const outsideSafe =
-          isFocal &&
+          (isFocal || isHeadline) &&
           (rect.left < safeBox.left - 8 ||
             rect.top < safeBox.top - 8 ||
             rect.right > safeBox.right + 8 ||
@@ -443,8 +501,10 @@ function buildUnifiedReviewBoardHtml(meta, shotResults) {
         )
         .join("");
 
+      const socialHudSvg = buildSocialHudSvg(heroW, heroH, sb, sx, sy, meta.safePreset);
       const overlaySvg = `<svg class="overlay" viewBox="0 0 ${heroW} ${heroH}" width="${heroW}" height="${heroH}">
-        <rect x="${(sb.left * sx).toFixed(1)}" y="${(sb.top * sy).toFixed(1)}" width="${((sb.right - sb.left) * sx).toFixed(1)}" height="${((sb.bottom - sb.top) * sy).toFixed(1)}" fill="none" stroke="rgba(255,159,10,${vio ? "0.85" : "0.35"})" stroke-width="1" stroke-dasharray="4 3"/>
+        ${socialHudSvg}
+        <rect x="${(sb.left * sx).toFixed(1)}" y="${(sb.top * sy).toFixed(1)}" width="${((sb.right - sb.left) * sx).toFixed(1)}" height="${((sb.bottom - sb.top) * sy).toFixed(1)}" fill="none" stroke="rgba(255,159,10,${vio ? "0.9" : "0.45"})" stroke-width="1" stroke-dasharray="4 3"/>
         ${vioRects}
       </svg>`;
 
@@ -553,7 +613,7 @@ function buildUnifiedReviewBoardHtml(meta, shotResults) {
           <h1>${escapeHtml(meta.title)}</h1>
         </div>
         <div class="hdr-meta">
-          <div>${meta.width}×${meta.height} · ${shotResults.length} BEATS · ${escapeHtml(meta.harmony)}</div>
+          <div>${meta.width}×${meta.height} · ${shotResults.length} BEATS · SAFE: ${escapeHtml((meta.safePreset || "clean").toUpperCase())}</div>
           <div>TENSION: ${escapeHtml(meta.tension)}</div>
         </div>
       </div>
@@ -603,6 +663,7 @@ function buildDesignBoardHtml(meta, shotResults, mode) {
           })
           .join("");
         overlaySvg = `<svg class="overlay" viewBox="0 0 ${thumbW} ${thumbH}" width="${thumbW}" height="${thumbH}">
+          ${buildSocialHudSvg(thumbW, thumbH, sb, sx, sy, meta.safePreset)}
           <line x1="${(thumbW / 3).toFixed(1)}" y1="0" x2="${(thumbW / 3).toFixed(1)}" y2="${thumbH}" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4"/>
           <line x1="${((thumbW * 2) / 3).toFixed(1)}" y1="0" x2="${((thumbW * 2) / 3).toFixed(1)}" y2="${thumbH}" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4"/>
           <line x1="0" y1="${(thumbH / 3).toFixed(1)}" x2="${thumbW}" y2="${(thumbH / 3).toFixed(1)}" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4"/>
@@ -840,6 +901,7 @@ function buildMotionStripHtml(meta, shotResults) {
 
 export async function generateBoards(projectDir, { full = false } = {}) {
   const { absProject, brief, shots, width, height } = discoverProject(projectDir);
+  const safeArea = resolveSafeArea(width, height, brief);
   const outDir = path.join(absProject, "dfm-out");
   fs.mkdirSync(outDir, { recursive: true });
 
@@ -937,7 +999,7 @@ export async function generateBoards(projectDir, { full = false } = {}) {
         motionFrames.push({ t: tVal, img });
         if (!heroImg && Math.abs(tVal - heroAt) <= 0.08) {
           heroImg = img;
-          dom = await measureShotDom(browser, width, height);
+          dom = await measureShotDom(browser, width, height, safeArea);
         }
       }
 
@@ -946,7 +1008,7 @@ export async function generateBoards(projectDir, { full = false } = {}) {
           await browser.evalJS(`window.film.frame(${heroAt}); void document.body.offsetHeight;`);
         }
         heroImg = await captureFrame();
-        dom = await measureShotDom(browser, width, height);
+        dom = await measureShotDom(browser, width, height, safeArea);
       }
 
       const pixels = await analyzeImagePixels(browser, heroImg, imgMime);
@@ -985,6 +1047,8 @@ export async function generateBoards(projectDir, { full = false } = {}) {
       title: brief?.title || path.basename(absProject),
       width,
       height,
+      safePreset: safeArea.preset,
+      safeArea,
       harmony: brief?.colorScript?.harmony || brief?.style?.archetype || "freeform",
       colorArc: brief?.colorScript?.colorArc || "custom",
       tension: brief?.concept?.tensionPair ? brief.concept.tensionPair.join(" ↔ ") : "freeform"
