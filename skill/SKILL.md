@@ -3,20 +3,21 @@ name: dfm-kit
 description: >-
   Fast, style-agnostic Design-for-Motion director toolkit for programmatic video (OpenFilm built-in;
   Hyperframes & Remotion ready): continuous-world camera & physical motion primitives, OKLCH Color
-  Script extraction, Google Fonts casting, 13-API cinema optical lens kit, 1-board fast visual
-  microscope with anti-slide & zero-crash QA, and native sound design.
+  Script extraction, Google Fonts casting, real tactile textures, 13-API cinema optical lens kit,
+  paginated sharp review boards with zero-crash QA, and native sound design.
 ---
 
-# dfm-kit v0.7 — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v0.8 — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies).
 
-> **Fast Execution Rules (Saves 70%+ Turn Time Without Sacrificing Craft)**
-> 1. **Start immediately — do not browse the toolkit repo**: All CLI commands, verified runtime signatures, and font castings are inlined below. Do **not** inspect `cli/` source files or unrelated directories.
-> 2. **Voiceover-First eliminates rework**: If the video has spoken narration, generate TTS **first** and build `brief.json` & `scene.html` directly to its real timestamps in one clean pass — never build picture first and stretch audio afterward.
-> 3. **Prefer single-file `scene.html` continuous-world architecture**: Drive all beats of a film from one `scene.html` inside ONE shared spatial world (`#world` moved by a real camera, or a persistent morphing hero stage) so fonts load once and transitions are physical camera motion — never slide switching.
-> 4. **1-Board Fast Visual Review**: Run `dfm check` to generate **one all-in-one `dfm-out/review-board.png`** (Hero frame + Grayscale Value + 3-frame Motion Strip + Movie Color Barcode + Safe Zone + 0.25s full-timeline crash sweep + audio check). Read only that 1 image; use 1–2s `dfm snap` for targeted re-checks after local edits.
-> 5. **Never run `dfm preview` inside OpenFilm Studio**: Studio provides native real-time playback. If your working directory is already inside `OpenFilm/Projects/`, skip `to-openfilm` as well.
+> **Director's Craft & Speed Contract (Fast Toolchain — Zero Quality Shortcuts)**
+> 1. **Craft quality is non-negotiable**: Speed comes from the zero-wait toolchain (inlined APIs, sharp paginated review boards, 1–2s `dfm snap`, no `dfm preview` in Studio) — never from skipping fonts, ignoring real textures/assets, or repeating one template across beats.
+> 2. **Start immediately — do not browse CLI source code**: All CLI commands, verified runtime signatures, curated Google Fonts, and available local textures are inlined below. Do **not** inspect `cli/` source files or unrelated directories.
+> 3. **Voiceover-First & User Asset Inventory**: If the video has spoken narration, generate TTS **first** to lock real timestamps and build `brief.json` & `scene.html` to them in one pass. Also inspect the user's attachments and OpenFilm media (`openfilm get my-media --kind image|video|audio`) up front — tell color references (extract with `dfm palette`) apart from visual/audio assets that should appear in the film.
+> 4. **Continuous spatial world — zero single-template loops**: Build ONE shared `#world` flown by `createWorldCamera` (or one persistent morphing stage) with genuinely distinct per-beat visual metaphors, scales, and compositions — at least 4 distinct visual architectures across a multi-beat film; never repeat one 2-line template for every beat.
+> 5. **Hard Delivery Gate + Polish Pass**: Run `dfm check` and inspect **every** `dfm-out/review-board*.png` page (auto-paginated at ≤6 beats per page so every frame stays crisp). Resolve all `BLOCKER` and `FIX` items, polish the weakest 1–2 beats, and re-verify with `dfm snap` / `dfm check` until `BLOCKER=0` and `FIX=0` before delivery.
+> 6. **Never run `dfm preview` inside OpenFilm Studio**: Studio provides native real-time playback. If your working directory is already inside `OpenFilm/Projects/`, skip `to-openfilm` as well.
 
 ---
 
@@ -27,7 +28,7 @@ Command entry: `node "<DFM_ROOT>/cli/dfm.mjs" <command>`
 | Command | Purpose & Typical Speed |
 |---|---|
 | `palette <imagePath> [outDir]` | ~2s — Extract OKLCH Color Script, swatch PNG & `*-palette.json` from any reference still/palette |
-| `check <projectDir>` | ~2–6s — Render **1 compact `dfm-out/review-board.png`**, run 0.25s full-timeline crash sweep & Q1–Q16 QA (add `--full` only when 5 standalone HD boards are explicitly needed) |
+| `check <projectDir>` | ~2–8s — Render sharp review board(s) (`dfm-out/review-board.png`, or `review-board-1.png`, `-2.png`… at ≤6 beats/page), run 0.25s full-timeline crash sweep & Q1–Q16 QA (add `--full` only when 5 standalone HD boards are explicitly needed) |
 | `snap <htmlFile> <t1,t2,...>` | ~1–2s — Inspect specific timestamps (e.g. `snap scene.html 1.5,4.2,7.8`) -> `dfm-out/snap.png` + safe-zone stats |
 | `to-openfilm <projectDir> [draftName]` | Package & sync into OpenFilm Studio `Projects/` (only needed when authoring outside Studio) |
 
@@ -62,11 +63,11 @@ Copy only what you need into the project directory & import via `./`:
 - **Camera Physics & Timing**:
   - `lens.stepTime(t, fps)` | `lens.handheld(t, opts)` | `lens.impactShake(t, hitAt, { power, decay, freq })` -> `{ x, y, rot }` | `lens.gateWeave(t, opts)` | `lens.dollyZoom(stageEl, contentEl, p, opts)` | `lens.crashZoom(el, t, start, dur, { fromScale, toScale, blurMax })`
 
-### D. `./dfm-craft.css` & Optional Local Tactile Textures
+### D. `./dfm-craft.css` & Real Tactile Textures
 - Procedural overlays: `.craft-grain`, `.craft-grain-heavy`, `.craft-halftone-print`, `.craft-halation`, `.craft-paper-fiber`, `.craft-vignette`, `.craft-scanlines`
-- If `<DFM_ROOT>/textures/web/` has pre-baked `<=1200px` proxies, copy directly into `assets/` with zero `ffmpeg` wait.
+<!-- DFM_LOCAL_TEXTURES -->
 
-### E. Curated Google Fonts Casting (always `await document.fonts.ready`)
+### E. Curated Google Fonts Casting (always load via `<link>` / `@font-face` and `await document.fonts.ready`)
 - **Editorial / Documentary**: `Instrument Serif` + `Noto Serif SC` + `JetBrains Mono`
 - **Modern Tech / SaaS**: `Space Grotesk` + `Noto Sans SC` + `Space Mono`
 - **High-Impact Poster / Kinetic Intro**: `Anton` + `Noto Sans SC` + `IBM Plex Mono`
@@ -80,38 +81,39 @@ Copy only what you need into the project directory & import via `./`:
 
 1. **Form & Ground Color Grow Strictly from Content**: Choose any medium (2D vector, Canvas illustration, WebGL, 3D macro UI, archival collage, darkroom optics, kinetic typography) and any color discipline — a unified single-ground palette throughout the entire film is completely valid when it serves the mood.
 2. **Filmic Color Script First (60-30-10)**: When the user provides a reference image or palette, extract and lock its exact relationships via `dfm palette`. Otherwise define OKLCH dominant ground, support surface, ink, and restrained focal accent in `brief.json`.
-3. **Real Spatial Stage — Never Build a Slide-Switcher DOM**:
+3. **Real Spatial Stage — Zero Slide-Switchers & Zero Template Loops**:
    - **Never** stack isolated full-screen `.beat` / `.slide` boxes at `inset: 0` and toggle them via `display: none` or `visibility: hidden` (even with a fake color wipe overlaid on top). That architecture physically forces a slide-deck feel.
    - **Instead**, build ONE continuous spatial world (`<div id="world">` placed at real `(x, y, z, rx, ry, rz)` coordinates flown by `createWorldCamera`, or ONE persistent Canvas/SVG world where the hero object/camera continuously dives, pans, orbits, or morphs across space).
-   - **Never reuse one master-slide CSS layout** (e.g. identical left-title + right-widget coordinates across beats). Vary visual geometry and framing dramatically from beat to beat (macro detail -> angled 3D perspective -> full-bleed oversized type -> tight portal dive -> wide architectural resolve).
-4. **Truth to Medium (Zero Cheap Faux-3D or Fake Gradients)**:
+   - **Every beat earns its own composition**: Vary visual geometry, shot scale, and metaphor dramatically from beat to beat (macro detail -> angled 3D perspective -> full-bleed oversized type -> tight portal dive -> wide architectural resolve). A single layout recipe re-skinned with new text for each beat reads as a template loop — `dfm check` measures structural similarity between beats and flags it.
+4. **Truth to Medium & Authentic Assets (Zero Cheap Faux-3D or Fake Gradients)**:
    - **Use 3D for Camera & Spatial Depth — NOT Fake CSS Props**: Keep individual planes honest, crisp, matte, and architectural (pure OKLCH solid fills, razor-sharp `1px` hairline borders, bold geometric vectors, authentic cast typography) flying inside real 3D camera space (`createWorldCamera`).
    - **Never Fake Real Materials with CSS Gradients**: Do NOT use `conic-gradient` to imitate brushed metal, diagonal white `#fff...transparent` streaks to imitate glossy glass/plastic, `radial-gradient` balls to imitate 3D spheres, or thick 0-blur offset `box-shadow` hacks (`15px 20px 0`) to fake slab thickness.
-   - **Use Real Assets When Realism or Tactile Texture Is Needed**: For film grain, paper fiber, or halftone, use `dfm-craft.css` or real scans in `textures/web/`. When the story genuinely calls for a photorealistic object, physical lens, sculpture, or real-world scene, pull or generate a real raster image via OpenFilm (`openfilm get my-media --kind image` / `openfilm get image`) and stage it inside the 3D camera world instead of hand-coding a janky faux-3D CSS/SVG model.
+   - **Reach for real assets whenever the story has material tactility**: For paper, print, or analog-film worlds, copy matching real scans from the local texture catalog above into `assets/` (blend per the catalog) and use `dfm-craft.css` for grain/halation. When the story genuinely calls for a photorealistic object, physical lens, sculpture, or real-world scene — or the user supplied photos/video — use their OpenFilm media (`openfilm get my-media --kind image`) or generate one (`openfilm get image`) and stage it inside the 3D camera world instead of hand-coding a janky faux-3D CSS/SVG model.
 5. **Product Intro / Showcase Anti-Catalog Rule**:
    - When asked for a product/project **intro**, **never** map features 1-to-1 into slow 4–5s catalog slides ("Feature 1 slide -> Feature 2 slide -> Logo").
    - Instead, direct a **high-velocity 10–18s continuous visual story or transformation** (average **1.2–2.4s per beat**): e.g., a live *Before -> Deconstruction/Transformation -> After* arc, or a single-take camera flight diving directly inside one living workspace/instrument. Keep every held beat subtly alive with `ambientDrift` and stagger secondary motion by 60–90ms.
    - **Optional Cinema Director's Menu (reach for 1–2 when fitting — never mandatory)**: directional `lens.motionBlur` / `lens.rgbSplit` on high-velocity moves, `lens.impactShake` on punch cuts, `lens.fisheye` / `lens.flutedGlass` / `lens.filmBurn` for optical signature, softly defocused foreground parallax occluders, or an optional tonal polarity shift at the narrative climax.
-6. **Pure Cinema Frame**: Treat the viewport as a cinema screen rather than a slide deck. Keep only the narrative subject, visual metaphors, and expressive hero copy — omit corner page counters, numbered section eyebrows, and decorative slide headers/footers.
+6. **Pure Cinema Frame**: Treat the viewport as a cinema screen rather than a slide deck. Keep only the narrative subject, visual metaphors, and expressive hero copy — omit corner page counters, numbered section eyebrows, and decorative slide headers/footers. Every beat shows a visible subject from its very first frame (no solid-blank openings).
 7. **Platform Safe-Zone Discipline (`format.safePreset`)**:
    - Backgrounds, atmospheric textures, and `data-bleed` graphics fill 100% of the canvas edge-to-edge; keep **all primary headlines, key metrics, and focal subjects** strictly inside the active safe zone:
      - **`social-strict` (default for 9:16 vertical — TikTok / Reels / Douyin / Xiaohongshu)**: `top 12.5% (240px)`, `right 14% (150px for like/share rail)`, `bottom 22% (420px for captions/HUD)`, `left 6% (65px)` -> safe box `x: 65-930, y: 240-1500` on `1080x1920`.
      - **`shorts` (when user specifies YouTube Shorts)**: `top 10% (190px)`, `right 11% (120px)`, `bottom 18% (340px)`, `left 5.5% (60px)`.
      - **`clean` (default for 16:9 / portfolio / no social HUD)**: `top 8%`, `right 6%`, `bottom 8%`, `left 6%`.
-   - `dfm check` draws translucent social-HUD ghost outlines directly onto vertical `review-board.png` frames so you can visually verify zero button/caption overlap.
+   - `dfm check` draws translucent social-HUD ghost outlines directly onto vertical review-board frames so you can visually verify zero button/caption overlap.
 8. **Single-Track Captions (No Double Subtitles)**: Whenever `film.html` mounts an OpenFilm native caption track (`<track kind="captions" src="...vtt">`), leave verbatim spoken narration to the `.vtt` track. Inside `scene.html`, draw only distilled visual headlines, keywords, metrics, or diagram callouts inside the safe zone above the bottom caption band.
 9. **OpenFilm Determinism**: Export `window.film = { width, height, duration, ready, frame(t) }`. Never use `requestAnimationFrame`, `Math.random()`, or per-frame layout mutations (`top/left/width/height`). Author `film.html` with native `<section><iframe id="..." src="scene.html" at="0"></iframe></section>` and dedicated `<section>` audio tracks.
 
 ---
 
-## 4. Standard 4-Step Production Loop (Audio-First & Zero Rework)
+## 4. Standard 4-Step Production Loop (Audio-First, Asset-Aware, Zero Rework)
 
-### Step 1: Lock Real Audio Timing (if narrated) + Write Concise Director Brief (`brief.json`)
+### Step 1: Lock Real Audio Timing + Inventory User Assets + Write Concise Director Brief (`brief.json`)
 - **If the film has spoken narration / voiceover**: Generate the voiceover **first** (`openfilm get tts` or user audio), read its real duration and caption timestamps, and lock `brief.json`'s total duration and beat timestamps (`start` / `duration`) directly to the real voiceover (`speed` stays `1.0` — never stretch/compress narration with `speed="0.77"`).
-- Write `brief.json` declaring `title`, `format: { width, height, aspect, fps }`, `concept: { oneLineTreatment, emotion, tensionPair }`, `visualWorld: { medium, spatialArchitecture, continuityMethod }`, `colorScript: { harmony, roles, colorArc }`, and `shots: [{ id, file, role, shotType, focalPoint, energy, start, duration, heroAt, transitionOut }]`. (Only set `"silent": true` if the user explicitly requested a silent piece.)
+- **Inventory the user's materials**: List attachments in the project (`.film/attachments`) and run `openfilm get my-media --kind image` / `--kind video` / `--kind audio`. Decide which are palette references (-> `dfm palette`) and which should be featured in the film.
+- Write `brief.json` declaring `title`, `format: { width, height, aspect, fps }`, `concept: { oneLineTreatment, emotion, tensionPair }`, `visualWorld: { medium, spatialArchitecture, continuityMethod }`, `colorScript: { harmony, roles, colorArc }`, and `shots: [{ id, file, role, shotType, focalPoint, energy, start, duration, heroAt, transitionOut }]` — use a **numeric `energy` (10–100)**. (Only set `"silent": true` if the user explicitly requested a silent piece.)
 
 ### Step 2: Build the Continuous World (`scene.html` + `film.html`)
-Build a single deterministic `scene.html` using `createWorldCamera` / persistent spatial stage (copy only needed `./dfm-motion.js`, `./dfm-time.js`, `./dfm-lens.js`, or `./dfm-craft.css` locally).
+Build a single deterministic `scene.html` using `createWorldCamera` / persistent spatial stage (copy only needed `./dfm-motion.js`, `./dfm-time.js`, `./dfm-lens.js`, or `./dfm-craft.css` locally). Load the cast Google Fonts explicitly and `await document.fonts.ready`; copy matching real textures/user media into `assets/` when the story fits; give every beat a distinct composition and a visible first frame.
 
 ### Step 3: Mandatory Default Sound Design & Continuous Bed (`film.html`)
 **Do NOT skip sound even when the user does not mention audio.** Every video needs a continuous sound bed plus frame-synced SFX unless the user explicitly requested silence (free local CC0 library first — zero credits):
@@ -123,11 +125,11 @@ Build a single deterministic `scene.html` using `createWorldCamera` / persistent
    - If unavailable locally and the user has connected audio generation in Studio, use `openfilm get sfx` / `openfilm get music`.
 2. **Mount Audio Cleanly on Dedicated `<section>` Tracks in `film.html`**:
    - **Continuous bed (`at="0"`)**: Run one low-gain music or subtle ambient bed spanning `0` to the full film duration (`volume="0.12-0.16"` under voiceover, `0.30-0.44` for music-only intros) — verify the source clip is long enough so audio never drops out mid-film or leaves abrupt dead-silence gaps between chopped clips.
-   - **Synced SFX**: Align transition whooshes, hits, and UI clicks to exact action timestamps (`at="1.9" volume="0.40-0.58"`), avoiding overlapping loud peaks.
+   - **Synced SFX**: Align transition whooshes, hits, and UI clicks to exact action timestamps (`at="1.9" volume="0.40-0.58"`), avoiding overlapping loud peaks. Every referenced file must exist in `assets/`.
    - **Natural voiceover speed**: Keep narration at `speed="1"` (omit `speed`); never time-stretch narration to cover mismatched picture length.
 
-### Step 4: 1-Board Fast Visual + Audio QA Gate & Delivery
-1. Run `node "<DFM_ROOT>/cli/dfm.mjs" check .` (~2–6s). Q11 checks for slide-switcher DOM traps & sluggish holds; Q16 automatically verifies `window.film.frame(t)`, 0.25s full-timeline crash-free execution, and mounted `<audio>` tracks in `film.html`.
-2. Inspect **`dfm-out/review-board.png`** with your vision tool alongside the Q1–Q16 report.
-3. Fix any visual, spatial, framing, contrast, caption, audio, or motion defect; verify localized visual fixes in 1–2s with `node "<DFM_ROOT>/cli/dfm.mjs" snap scene.html <t1,t2>`.
+### Step 4: Sharp Review-Board QA Gate, Polish Pass & Delivery
+1. Run `node "<DFM_ROOT>/cli/dfm.mjs" check .` (~2–8s). Long films are paginated into `dfm-out/review-board-1.png`, `-2.png`, … (≤6 beats per page) so every frame stays readable. Q10 also flags layout-template repetition; Q11 checks for slide-switcher DOM traps & sluggish holds; Q16 verifies `window.film.frame(t)`, 0.25s full-timeline crash-free execution, non-blank opening frames, and mounted `<audio>` tracks.
+2. Inspect **every** `dfm-out/review-board*.png` page with your vision tool alongside the Q1–Q16 report.
+3. Fix every `BLOCKER` and `FIX` item, then **polish the weakest 1–2 beats** (hierarchy, spacing, contrast, motion) — verify localized visual fixes in 1–2s with `node "<DFM_ROOT>/cli/dfm.mjs" snap scene.html <t1,t2>`, and re-run `check` until `BLOCKER=0` and `FIX=0`.
 4. **(External authoring only)**: Run `node "<DFM_ROOT>/cli/dfm.mjs" to-openfilm <projectDir> <draftName>`. If already inside `OpenFilm/Projects/`, deliver directly for real-time playback in Studio.

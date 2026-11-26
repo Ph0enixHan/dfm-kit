@@ -1,5 +1,5 @@
 /**
- * audit.mjs (v0.3 — Style-Agnostic Design-for-Motion Q1-Q16 QA Auditor)
+ * audit.mjs (v0.8 — Style-Agnostic Design-for-Motion Q1-Q16 QA Auditor)
  * Zero style lock-in: never bans glow, never forces 3D planes, never caps artistic density.
  * Strictly guards universal OpenFilm craft: determinism, GPU performance, grayscale value,
  * Color Script discipline, Pure Cinema Frame (no slide pagination/eyebrows), single-track
@@ -10,6 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseEnergyValue } from "./board.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUBRIC_PATH = path.resolve(__dirname, "..", "spec", "rubric.json");
@@ -126,13 +127,14 @@ function scanShotSource(filePath) {
     });
   }
 
-  // Flag bare system Arial/Times fallback when no Google Fonts or @font-face is loaded
-  const hasCustomFont = /fonts\.googleapis\.com|@font-face/i.test(styleCorpus);
-  if (!hasCustomFont && /font-family\s*:\s*["']?(?:Arial|Times New Roman|Helvetica)\b/i.test(styleCorpus)) {
+  // Flag missing custom typefaces: any visible text relying on bare system fallback fonts
+  const hasCustomFont = /fonts\.googleapis\.com|fonts\.gstatic\.com|@font-face|\.woff2?\b|\.ttf\b|\.otf\b/i.test(styleCorpus);
+  const hasVisibleText = /font-family\s*:|<h[1-6]\b|<p\b|<text\b|fillText\s*\(/i.test(styleCorpus);
+  if (!hasCustomFont && hasVisibleText) {
     issues.push({
       rule: "Q13",
       level: "Fix",
-      msg: "No Google Fonts or @font-face loaded (falling back to bare system Arial/Helvetica) — cast an intentional typeface from the curated Google Fonts list"
+      msg: "No Google Fonts or @font-face loaded (relying on bare system fallback fonts) — load an intentional curated typeface pair and await document.fonts.ready"
     });
   }
 
@@ -200,7 +202,13 @@ export function runAudit(projectDir) {
             const full = path.join(absProject, f);
             if (!fs.existsSync(full)) continue;
             const shotSrc = fs.readFileSync(full, "utf8").replace(/<style[\s\S]*?<\/style>/gi, "");
-            const literals = [...shotSrc.matchAll(/['"`]([^'"`\n]{8,120})['"`]/g)].map((m) => m[1].trim());
+            const jsLiterals = [...shotSrc.matchAll(/['"`]([^'"`\n]{8,120})['"`]/g)].map((m) => m[1].trim());
+            const htmlTextNodes = [
+              ...shotSrc
+                .replace(/<script[\s\S]*?<\/script>/gi, "")
+                .matchAll(/>([^<>{}\n]{8,120})</g)
+            ].map((m) => m[1].trim());
+            const literals = [...new Set([...jsLiterals, ...htmlTextNodes])];
             const dupes = [];
             for (const lit of literals) {
               if (/^https?:|rgba?\(|px\s|sans-serif|monospace|assets\/|captions\//i.test(lit)) continue;
@@ -259,9 +267,9 @@ export function runAudit(projectDir) {
 
       case "Q3": {
         if (brief?.shots?.length >= 2) {
-          const energies = brief.shots.map((s) => s.energy ?? 50);
+          const energies = brief.shots.map((s) => parseEnergyValue(s.energy));
           const span = Math.max(...energies) - Math.min(...energies);
-          notes.push(`Energy range ${span} (check pacing across review-board.png)`);
+          notes.push(`Energy range ${span} (check pacing across review-board*.png)`);
           status = "Pass";
         } else {
           status = "Review";
@@ -342,6 +350,13 @@ export function runAudit(projectDir) {
           status = "Review";
           notes.push("Inspect framing variety on review-board.png");
         }
+        const lv = board?.layoutVariety;
+        if (board?.shots?.length >= 6 && lv && (lv.meanPairwiseSimilarity >= 0.78 || lv.highSimPairPct >= 65)) {
+          status = "Fix";
+          notes.push(
+            `Visual layout repetition: mean structural similarity ${(lv.meanPairwiseSimilarity * 100).toFixed(0)}%, ${lv.highSimPairPct}% of beat pairs look near-identical — vary framing geometry, shot scale, and visual metaphor per beat instead of repeating one layout template`
+          );
+        }
         break;
       }
 
@@ -404,7 +419,7 @@ export function runAudit(projectDir) {
       case "Q16": {
         if (board) {
           const noFilm = board.shots.filter((s) => !s.hasFilm);
-          const blankEntry = board.shots.filter((s) => s.entryPixels && s.entryPixels.valueDynamicRange < 10 && s.entryPixels.meanLuma < 10);
+          const blankEntry = board.shots.filter((s) => s.entryPixels && s.entryPixels.valueDynamicRange < 12);
           const rtErrs = board.runtimeErrors || [];
           const hasFilmHtml = fs.existsSync(filmHtmlPath);
           const filmHtmlContent = hasFilmHtml ? fs.readFileSync(filmHtmlPath, "utf8") : "";
@@ -458,7 +473,12 @@ export function runAudit(projectDir) {
           }
           if (blankEntry.length) {
             if (status !== "Blocker") status = "Fix";
-            notes.push(...blankEntry.map((s) => `${s.id} opening frame is nearly pure black`));
+            notes.push(
+              ...blankEntry.map(
+                (s) =>
+                  `${s.id} opening frame at t=${s.entryAt}s is a near-solid blank (ΔVal ${s.entryPixels.valueDynamicRange}, meanLuma ${s.entryPixels.meanLuma}) — give every beat a visible subject from its first frame`
+              )
+            );
           }
           if (missingAudio) {
             if (status !== "Blocker") status = "Fix";
@@ -496,7 +516,7 @@ export function runAudit(projectDir) {
   const outDir = path.join(absProject, "dfm-out");
   fs.mkdirSync(outDir, { recursive: true });
   const mdLines = [
-    `# Design for Motion QA Report (v0.3 Style-Agnostic) — ${brief?.title || path.basename(absProject)}`,
+    `# Design for Motion QA Report (v0.8 Style-Agnostic) — ${brief?.title || path.basename(absProject)}`,
     "",
     `- **Summary**: PASS: ${summary.pass} | REVIEW: ${summary.review} | FIX: ${summary.fix} | BLOCKER: ${summary.blocker}`,
     `- **Checked At**: ${new Date().toISOString()}`,

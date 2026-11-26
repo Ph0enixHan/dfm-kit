@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * dfm.mjs (v0.3) — Fast Style-Agnostic Design-for-Motion Visual Microscope & Color Script CLI for OpenFilm
+ * dfm.mjs (v0.8) — Fast Style-Agnostic Design-for-Motion Visual Microscope & Color Script CLI
  * Zero npm dependencies (Node 22+ built-in WebSocket/http + local Chrome/Edge CDP).
  */
 
@@ -22,10 +22,10 @@ const isFull = flags.has("--full");
 
 function printHelp() {
   console.log(`
-dfm-kit v0.7 — Style-agnostic Design-for-Motion visual microscope & Color Script CLI for programmatic video
+dfm-kit v0.8 — Style-agnostic Design-for-Motion visual microscope & Color Script CLI for programmatic video
 
 Usage:
-  node cli/dfm.mjs check         <projectDir> [--full]    Render fast 1-board review-board.png + Q1-Q16 audit (--full for 5 HD boards)
+  node cli/dfm.mjs check         <projectDir> [--full]    Render fast review board(s) (<=6 beats/page) + Q1-Q16 audit (--full for 5 HD boards)
   node cli/dfm.mjs snap          <htmlFile> <t1,t2,...>   Instant 1-2s frame inspector (e.g. snap scene.html 1.2,3.5,6.0)
   node cli/dfm.mjs palette       <imagePath> [outDir]     Extract OKLCH Color Script, swatch PNG & theme CSS from any reference image
   node cli/dfm.mjs to-openfilm   <projectDir> [draftName] Package & sync directly into OpenFilm Studio Projects
@@ -88,7 +88,7 @@ function initStarter(targetDir) {
 }
 
 function printAuditTable(audit) {
-  console.log("\n================= Q1-Q16 Design for Motion QA Report (v0.3) =================");
+  console.log("\n================= Q1-Q16 Design for Motion QA Report (v0.8) =================");
   for (const r of audit.results) {
     const tag =
       r.status === "Pass"
@@ -117,6 +117,7 @@ async function main() {
     const res = installOpenFilmSkill(targetArg);
     console.log(`Installed dfm-kit skill to: ${res.destFile}`);
     console.log(`Bound local repo root: ${res.repoRoot}`);
+    console.log(`Local texture packs injected: ${res.texturePacksCount} (${res.textureFilesCount} files)`);
     return;
   }
 
@@ -170,7 +171,13 @@ async function main() {
     console.log(`Rendering ${isFull ? "5 HD diagnostic boards + review board" : "fast all-in-one review board"}: ${path.resolve(targetArg)} ...`);
     const { outputs } = await generateBoards(targetArg, { full: isFull });
     console.log("Board(s) generated:");
-    console.log(`  - Review Board: ${outputs.reviewBoard}`);
+    const pages = outputs.reviewBoards || [outputs.reviewBoard];
+    if (pages.length > 1) {
+      pages.forEach((p, i) => console.log(`  - Review Board ${i + 1}/${pages.length}: ${p}`));
+      console.log("  (Inspect ALL pages — each page holds <=6 beats so every frame stays crisp.)");
+    } else {
+      console.log(`  - Review Board: ${outputs.reviewBoard}`);
+    }
     if (isFull) {
       console.log(`  - Design Board: ${outputs.designBoard}`);
       console.log(`  - Value Board:  ${outputs.valueBoard}`);

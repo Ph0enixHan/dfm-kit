@@ -40,9 +40,9 @@ flowchart LR
 ![电影光学镜头箱：鱼眼、方向动态模糊、RGB 色散、移轴浅景深](./docs/images/02-cinema-lenses.png)
 
 ### 第 4 步 · 1 板极速视觉显微镜 + 全轴防崩溃质检（`dfm check`）
-仅需 **2~6 秒** 即可输出 **1 张高信息密度 `review-board.png`**，一图看全英雄帧、黑白明度分离（`ΔVal`）、3 帧动效连拍（`MOTION Δ`）、全片/单镜电影色带（Movie Color Barcode）与安全区越界框（需要 5 张独立高清板时加 `--full`）。
+仅需 **2~8 秒** 即可输出**清晰的高信息密度审片板**（`review-board.png`；超过 6 镜的长片自动分页为 `review-board-1.png`、`-2.png`……确保视觉模型看得清每一帧），一图看全英雄帧、黑白明度分离（`ΔVal`）、3 帧动效连拍（`MOTION Δ`）、全片/单镜电影色带（Movie Color Barcode）与安全区越界框（需要 5 张独立高清板时加 `--full`）。
 
-同时 **`dfm audit`** 自动执行 **Q1–Q16 质检**——包括 **0.25s 全时间轴扫帧防崩溃**、**分平台竖屏安全区与半透明 UI 遮罩预览**（默认 `social-strict` 适配 TikTok/Reels/抖音/小红书，可选 `shorts` 适配 YouTube Shorts 或 `clean` 纯画幅）、反 PPT 翻页架构检测、诚实于媒介（廉价假 3D 渐变/裸字体拦截）、纯净银幕、单轨 `.vtt` 双字幕冲突检测以及 `<audio>` 音轨挂载门禁：
+同时 **`dfm audit`** 自动执行 **Q1–Q16 质检**——包括 **0.25s 全时间轴扫帧防崩溃**、**分平台竖屏安全区与半透明 UI 遮罩预览**（默认 `social-strict` 适配 TikTok/Reels/抖音/小红书，可选 `shorts` 适配 YouTube Shorts 或 `clean` 纯画幅）、反 PPT 翻页架构检测、**画面结构雷同检测**（拦截单一模版换字复读多镜）、诚实于媒介（廉价假 3D 渐变拦截）、**自定义字体守卫**、**任意纯色空白开场帧检测**、纯净银幕、单轨 `.vtt` 双字幕冲突检测（覆盖 JS 字符串与静态 HTML 文本）以及 `<audio>` 音轨挂载门禁。AI 被要求精修到 `BLOCKER=0` 且 `FIX=0` 才能交付：
 
 ![1 板全能视觉显微镜](./docs/images/03-review-board-16x9.png)
 
@@ -81,7 +81,7 @@ git clone https://github.com/Ph0enixHan/dfm-kit.git
 cd dfm-kit
 node cli/dfm.mjs install-skill
 ```
-该命令会自动将 `skill/SKILL.md` 写入本机 OpenFilm Studio 的 `Skills/dfm-kit/` 目录（也可通过 `DFM_OPENFILM_SKILLS` 或命令行参数指定任意技能目录），并自动绑定本地仓库路径。
+该命令会自动将 `skill/SKILL.md` 写入本机 OpenFilm Studio 的 `Skills/dfm-kit/` 目录（也可通过 `DFM_OPENFILM_SKILLS` 或命令行参数指定任意技能目录），自动绑定本地仓库路径；若你在 `textures/web/` 放有真实扫描材质，还会把材质清单自动内联进已安装的 Skill，AI 无需翻目录即可直接调用。
 
 ### 2. 用 AI 导演成片
 在你的项目里调用 `dfm-kit` 技能并描述视频内容（甚至只给一句话，可选附带参考剧照或色卡），AI 会自动跑完上述 6 步导演闭环。

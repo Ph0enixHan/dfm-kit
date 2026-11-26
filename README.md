@@ -41,9 +41,9 @@ Guided by **Truth to Medium**, surfaces stay crisp, matte, and architectural (ze
 ![Cinema Optical Lens Kit: Fisheye, Directional Motion Blur, RGB Split, Tilt-Shift](./docs/images/02-cinema-lenses.png)
 
 ### Step 4 · 1-Board Fast Visual Microscope & Automated QA (`dfm check`)
-In **~2–6 seconds**, `dfm check` renders **one compact, high-density `review-board.png`** combining Hero frames, Grayscale Value separation (`ΔVal`), 3-frame Motion Strips (`MOTION Δ`), whole-film & per-shot Movie Color Barcodes, and Safe-Zone overlays (pass `--full` for 5 standalone HD boards).
+In **~2–8 seconds**, `dfm check` renders **sharp, high-density review boards** (`review-board.png`; films longer than 6 beats are auto-paginated into `review-board-1.png`, `-2.png`… so every frame stays crisp for vision models) combining Hero frames, Grayscale Value separation (`ΔVal`), 3-frame Motion Strips (`MOTION Δ`), whole-film & per-shot Movie Color Barcodes, and Safe-Zone overlays (pass `--full` for 5 standalone HD boards).
 
-At the same time, **`dfm audit`** runs **Q1–Q16 automated QA** — including a **0.25s full-timeline zero-crash sweep** of `frame(t)`, **platform-aware vertical safe zones** (`social-strict` for TikTok/Reels/Douyin/Xiaohongshu with ghost UI overlay, `shorts` for YouTube Shorts, `clean` for 16:9), anti-slide DOM architecture detection, Truth-to-Medium faux-3D/gradient checks, Pure Cinema Frame checks, single-track `.vtt` caption collision checks, and `<audio>` track verification:
+At the same time, **`dfm audit`** runs **Q1–Q16 automated QA** — including a **0.25s full-timeline zero-crash sweep** of `frame(t)`, **platform-aware vertical safe zones** (`social-strict` for TikTok/Reels/Douyin/Xiaohongshu with ghost UI overlay, `shorts` for YouTube Shorts, `clean` for 16:9), anti-slide DOM architecture detection, **visual layout-repetition detection** (flags one template re-skinned across many beats), Truth-to-Medium faux-3D/gradient checks, a **custom-font guard**, **blank-opening-frame detection** (any solid color), Pure Cinema Frame checks, single-track `.vtt` caption collision checks (JS strings and static HTML), and `<audio>` track verification. Agents are instructed to polish until `BLOCKER=0` and `FIX=0`:
 
 ![1-Board All-in-One Visual Microscope](./docs/images/03-review-board-16x9.png)
 
@@ -82,7 +82,7 @@ git clone https://github.com/Ph0enixHan/dfm-kit.git
 cd dfm-kit
 node cli/dfm.mjs install-skill
 ```
-This installs `skill/SKILL.md` into your OpenFilm Studio `Skills/dfm-kit/` folder (override destination via `DFM_OPENFILM_SKILLS` or pass any agent skills directory as an argument) and binds `<DFM_ROOT>` to your local clone automatically.
+This installs `skill/SKILL.md` into your OpenFilm Studio `Skills/dfm-kit/` folder (override destination via `DFM_OPENFILM_SKILLS` or pass any agent skills directory as an argument), binds `<DFM_ROOT>` to your local clone automatically, and — if you keep real scan textures in `textures/web/` — inlines a catalog of them into the installed skill so the agent can use them without browsing folders.
 
 ### 2. Direct a Video with Your AI Agent
 Invoke the `dfm-kit` skill and describe your video (or even give a single sentence, optionally with a reference color card or film still). The agent automatically executes the 6-step DFM pipeline end-to-end.

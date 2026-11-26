@@ -1,5 +1,5 @@
 /**
- * board.mjs (v0.3 — Fast All-in-One Review Board + Optional Full 5-Board Visual Microscope)
+ * board.mjs (v0.8 — Fast Paginated Review Boards + Layout Variety Metric + Optional Full 5-Board Visual Microscope)
  *
  * Default Fast Mode (dfm check <dir>):
  *   - Captures downscaled JPEG frames (0.5x scale, 3 key frames per beat, reuses Hero frame)
@@ -22,6 +22,29 @@ import { rgbToHex, rgbToOklch } from "./color-math.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
+
+export const MAX_BEATS_PER_BOARD = 6;
+
+export function parseEnergyValue(val) {
+  if (typeof val === "number" && Number.isFinite(val)) return val;
+  const num = Number(val);
+  if (typeof val === "string" && val.trim() !== "" && Number.isFinite(num)) return num;
+  const key = String(val ?? "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+  const map = {
+    quiet: 25,
+    calm: 25,
+    low: 25,
+    "medium-low": 40,
+    medium: 55,
+    "medium-high": 72,
+    high: 85,
+    peak: 95,
+    climax: 95
+  };
+  return map[key] ?? 50;
+}
+
+const pad2 = (n) => String(n).padStart(2, "0");
 
 function escapeHtml(s) {
   return String(s ?? "")
@@ -50,7 +73,7 @@ function discoverProject(projectDir) {
       shotType: s.shotType || "custom",
       symmetry: s.symmetry || "mixed",
       focalPoint: s.focalPoint || "",
-      energy: typeof s.energy === "number" ? s.energy : 50,
+      energy: parseEnergyValue(s.energy),
       start: typeof s.start === "number" ? s.start : 0,
       duration: s.duration || 3,
       heroAt: typeof s.heroAt === "number" ? s.heroAt : null
@@ -459,7 +482,8 @@ export async function measureShotDom(browser, width, height, safeArea = null) {
  * Combines Hero Frame + Safe-zone violation box + Grayscale Value thumbnail +
  * 3-frame Motion Strip + Whole-Film & Per-Shot Color Barcode + OKLCH Swatches.
  */
-function buildUnifiedReviewBoardHtml(meta, shotResults) {
+function buildUnifiedReviewBoardHtml(meta, pageShots, allShots, pageInfo) {
+  const shotResults = pageShots;
   const aspect = meta.width / meta.height;
   const isVertical = aspect < 0.85;
   const pad = 28;
@@ -476,7 +500,7 @@ function buildUnifiedReviewBoardHtml(meta, shotResults) {
   const headerH = 112;
   const canvasH = pad * 2 + headerH + shotResults.length * (rowH + rowGap) + 8;
 
-  const filmBarcode = shotResults
+  const filmBarcode = allShots
     .map((s) => {
       const segs = s.pixels.dominantColors
         .map((c) => `<div style="flex:${Math.max(1, c.pct)};background:${c.hex};height:100%;"></div>`)
@@ -536,7 +560,7 @@ function buildUnifiedReviewBoardHtml(meta, shotResults) {
         <div class="hero-box" style="width:${heroW}px;height:${heroH}px">
           <img src="${heroUrl}"/>
           ${overlaySvg}
-          <span class="tag-tl">0${s.index} · ${escapeHtml(s.id)}</span>
+          <span class="tag-tl">${pad2(s.index)} · ${escapeHtml(s.id)}</span>
           <span class="tag-br">${escapeHtml(s.shotType)} · ${s.heroAt}s</span>
         </div>
         <div class="val-col" style="width:${valW}px">
@@ -613,7 +637,7 @@ function buildUnifiedReviewBoardHtml(meta, shotResults) {
           <h1>${escapeHtml(meta.title)}</h1>
         </div>
         <div class="hdr-meta">
-          <div>${meta.width}×${meta.height} · ${shotResults.length} BEATS · SAFE: ${escapeHtml((meta.safePreset || "clean").toUpperCase())}</div>
+          <div>${meta.width}×${meta.height} · ${allShots.length} BEATS · SAFE: ${escapeHtml((meta.safePreset || "clean").toUpperCase())}${pageInfo && pageInfo.totalPages > 1 ? ` · PAGE ${pageInfo.page}/${pageInfo.totalPages} (BEATS ${pageInfo.startIdx}-${pageInfo.endIdx} OF ${allShots.length})` : ""}</div>
           <div>TENSION: ${escapeHtml(meta.tension)}</div>
         </div>
       </div>
@@ -623,6 +647,59 @@ function buildUnifiedReviewBoardHtml(meta, shotResults) {
   </body></html>`;
 
   return { html, width: canvasW, height: canvasH };
+}
+
+async function computeLayoutVariety(browser, shotResults) {
+  const empty = { meanPairwiseSimilarity: 0, highSimPairPct: 0, adjHighSimPct: 0, pairCount: 0 };
+  if (shotResults.length < 3) return empty;
+  const urls = shotResults.map((s) => toDataUrl(s.heroImg, s.imgMime));
+  const res = await browser.evalJS(`(async () => {
+    const urls = ${JSON.stringify(urls)};
+    const N = 32;
+    const vecs = [];
+    for (const u of urls) {
+      const img = new Image();
+      img.src = u;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = N; c.height = N;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, N, N);
+      const d = ctx.getImageData(0, 0, N, N).data;
+      const L = new Float32Array(N * N);
+      for (let i = 0; i < N * N; i++) L[i] = 0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2];
+      const grid = new Float32Array(100);
+      for (let y = 1; y < N - 1; y++) {
+        for (let x = 1; x < N - 1; x++) {
+          const e = Math.abs(L[y * N + x + 1] - L[y * N + x - 1]) + Math.abs(L[(y + 1) * N + x] - L[(y - 1) * N + x]);
+          const gx = Math.min(9, Math.floor(((x - 1) / (N - 2)) * 10));
+          const gy = Math.min(9, Math.floor(((y - 1) / (N - 2)) * 10));
+          grid[gy * 10 + gx] += e;
+        }
+      }
+      let norm = 0;
+      for (let i = 0; i < 100; i++) norm += grid[i] * grid[i];
+      norm = Math.sqrt(norm) || 1;
+      vecs.push(Array.from(grid, (v) => v / norm));
+    }
+    const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
+    let sum = 0, cnt = 0, high = 0, adjHigh = 0, adjCnt = 0;
+    for (let i = 0; i < vecs.length; i++) {
+      for (let j = i + 1; j < vecs.length; j++) {
+        const s = dot(vecs[i], vecs[j]);
+        sum += s; cnt++;
+        if (s >= 0.8) high++;
+        if (j === i + 1) { adjCnt++; if (s >= 0.8) adjHigh++; }
+      }
+    }
+    return {
+      meanPairwiseSimilarity: Number((sum / cnt).toFixed(3)),
+      highSimPairPct: Number(((high / cnt) * 100).toFixed(1)),
+      adjHighSimPct: Number(((adjHigh / Math.max(1, adjCnt)) * 100).toFixed(1)),
+      pairCount: cnt
+    };
+  })()`);
+  return res;
 }
 
 function buildDesignBoardHtml(meta, shotResults, mode) {
@@ -698,7 +775,7 @@ function buildDesignBoardHtml(meta, shotResults, mode) {
         </div>
         <div class="meta">
           <div class="meta-top">
-            <span class="shot-id">0${s.index} · ${escapeHtml(s.id)}</span>
+            <span class="shot-id">${pad2(s.index)} · ${escapeHtml(s.id)}</span>
             <span class="badge">${escapeHtml(s.role.toUpperCase())}</span>
           </div>
           ${footerExtra}
@@ -776,7 +853,7 @@ function buildColorBoardHtml(meta, shotResults) {
       return `<div class="row">
         <div class="thumb"><img src="${thumbUrl}" /></div>
         <div class="info">
-          <div class="r-top"><span class="sid">0${s.index} · ${escapeHtml(s.id)}</span><span class="sat-txt">CHROMA BUDGET: LOW ${sb.lowPct}% · MID ${sb.midPct}% · HIGH ${sb.highPct}%</span></div>
+          <div class="r-top"><span class="sid">${pad2(s.index)} · ${escapeHtml(s.id)}</span><span class="sat-txt">CHROMA BUDGET: LOW ${sb.lowPct}% · MID ${sb.midPct}% · HIGH ${sb.highPct}%</span></div>
           <div class="shot-barcode">${barSegs}</div>
           <div class="chroma-bar"><div style="width:${sb.lowPct}%;background:#4b5563;"></div><div style="width:${sb.midPct}%;background:#9ca3af;"></div><div style="width:${sb.highPct}%;background:${accentHex};"></div></div>
           <div class="pills">${pills}</div>
@@ -844,7 +921,7 @@ function buildMotionStripHtml(meta, shotResults) {
   const dots = pts
     .map(
       (p) =>
-        `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#e54d2e"/><text x="${p.x}" y="${p.y - 10}" fill="#d8d6d0" font-size="11" text-anchor="middle" font-family="Consolas">0${p.s.index} (${p.s.energy})</text>`
+        `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#e54d2e"/><text x="${p.x}" y="${p.y - 10}" fill="#d8d6d0" font-size="11" text-anchor="middle" font-family="Consolas">${pad2(p.s.index)} (${p.s.energy})</text>`
     )
     .join("");
 
@@ -861,7 +938,7 @@ function buildMotionStripHtml(meta, shotResults) {
       const cls = s.motionDelta < 1.2 ? "warn" : "ok";
       return `<div class="row">
         <div class="info">
-          <div class="s-title">0${s.index} · ${escapeHtml(s.id)}</div>
+          <div class="s-title">${pad2(s.index)} · ${escapeHtml(s.id)}</div>
           <div class="s-meta">${escapeHtml(s.role.toUpperCase())} · ${s.duration}s</div>
           <div class="m-pill ${cls}">MOTION Δ${s.motionDelta} (${motionStatus})</div>
           <div class="s-focal">${escapeHtml(s.focalPoint || "—")}</div>
@@ -1056,13 +1133,32 @@ export async function generateBoards(projectDir, { full = false } = {}) {
 
     const outputs = {};
 
-    // Always produce ONE compact all-in-one review-board.png
-    const review = buildUnifiedReviewBoardHtml(meta, shotResults);
-    await browser.setViewport(review.width, review.height);
-    await browser.setHtml(review.html);
-    const reviewPng = await browser.screenshotPng({ width: review.width, height: review.height });
-    outputs.reviewBoard = path.join(outDir, "review-board.png");
-    fs.writeFileSync(outputs.reviewBoard, reviewPng);
+    // Clean stale review boards, then render ONE board (<=6 beats) or paginated boards (>6 beats)
+    for (const f of fs.readdirSync(outDir)) {
+      if (/^review-board(-\d+)?\.png$/i.test(f)) fs.rmSync(path.join(outDir, f), { force: true });
+    }
+    const totalPages = Math.max(1, Math.ceil(shotResults.length / MAX_BEATS_PER_BOARD));
+    outputs.reviewBoards = [];
+    for (let p = 0; p < totalPages; p++) {
+      const startIdx = p * MAX_BEATS_PER_BOARD;
+      const pageShots = shotResults.slice(startIdx, startIdx + MAX_BEATS_PER_BOARD);
+      const pageInfo = {
+        page: p + 1,
+        totalPages,
+        startIdx: startIdx + 1,
+        endIdx: startIdx + pageShots.length
+      };
+      const review = buildUnifiedReviewBoardHtml(meta, pageShots, shotResults, pageInfo);
+      await browser.setViewport(review.width, review.height);
+      await browser.setHtml(review.html);
+      const reviewPng = await browser.screenshotPng({ width: review.width, height: review.height });
+      const outPath = path.join(outDir, totalPages === 1 ? "review-board.png" : `review-board-${p + 1}.png`);
+      fs.writeFileSync(outPath, reviewPng);
+      outputs.reviewBoards.push(outPath);
+    }
+    outputs.reviewBoard = outputs.reviewBoards[0];
+
+    const layoutVariety = await computeLayoutVariety(browser, shotResults);
 
     if (full) {
       for (const [key, mode, fileName] of [
@@ -1101,6 +1197,7 @@ export async function generateBoards(projectDir, { full = false } = {}) {
       meta,
       outputs,
       runtimeErrors,
+      layoutVariety,
       shots: shotResults.map(({ heroImg, motionFrames, imgMime: _m, ...rest }) => rest)
     };
 
