@@ -1,6 +1,6 @@
 /**
- * dfm-remotion.js (v0.9.0) — Declarative React / Remotion Style & Camera Bridge for dfm-kit
- * Zero dependencies (no React import needed). Pure deterministic f(t) style objects.
+ * dfm-remotion.js (v0.9.1) — Declarative React / Remotion Style, Camera & Optical Lens Bridge for dfm-kit
+ * Zero dependencies (no React import needed). Pure deterministic f(t) style & SVG filter helpers.
  * Copy alongside dfm-time.js & dfm-motion.js into src/dfm/ in any Remotion project.
  */
 
@@ -195,5 +195,137 @@ export function safeAreaBox(width = 1080, height = 1920, preset = null) {
       width: safeWidth,
       height: safeHeight
     }
+  };
+}
+
+/* ==========================================================================
+ * Declarative Cinema Optical Lens & Tactile Texture Helpers (React / SVG)
+ * ========================================================================== */
+
+/** Directional split-axis motion blur SVG filter params (<feGaussianBlur stdDeviation={...} />). */
+export function motionBlurFilterDef(id = "dfm-mb", dx = 0, dy = 0) {
+  const bx = Math.max(0, Math.abs(Number(dx) || 0));
+  const by = Math.max(0, Math.abs(Number(dy) || 0));
+  const active = bx > 0.15 || by > 0.15;
+  return {
+    id,
+    active,
+    stdDeviation: `${bx.toFixed(2)} ${by.toFixed(2)}`,
+    filterUrl: active ? `url(#${id})` : "none"
+  };
+}
+
+/** Optical RGB chromatic aberration SVG filter offsets for <feOffset> R/B channel split. */
+export function rgbSplitFilterDef(id = "dfm-rgb", px = 0, angleDeg = 0) {
+  const amt = Math.max(0, Number(px) || 0);
+  const rad = ((Number(angleDeg) || 0) * Math.PI) / 180;
+  const dx = Math.cos(rad) * amt;
+  const dy = Math.sin(rad) * amt;
+  const active = amt > 0.15;
+  return {
+    id,
+    active,
+    dx: Number(dx.toFixed(2)),
+    dy: Number(dy.toFixed(2)),
+    filterUrl: active ? `url(#${id})` : "none"
+  };
+}
+
+/** Macro shallow depth-of-field tilt-shift overlay style (place over stage with pointerEvents: none). */
+export function tiltShiftOverlayStyle({ focusY = 50, bandPct = 28, blurPx = 4.5 } = {}) {
+  const half = bandPct / 2;
+  const f1 = clamp(focusY - half - 14, 0, 100);
+  const f2 = clamp(focusY - half, 0, 100);
+  const f3 = clamp(focusY + half, 0, 100);
+  const f4 = clamp(focusY + half + 14, 0, 100);
+  const mask = `linear-gradient(to bottom, #000 ${f1}%, transparent ${f2}%, transparent ${f3}%, #000 ${f4}%)`;
+  return {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+    backdropFilter: `blur(${blurPx}px)`,
+    WebkitBackdropFilter: `blur(${blurPx}px)`,
+    maskImage: mask,
+    WebkitMaskImage: mask
+  };
+}
+
+/** Cinema horizontal anamorphic optical streak flare style. */
+export function anamorphicFlareStyle({ yPct = 50, color = "#ff7832", intensity = 0.65, heightPx = 56 } = {}) {
+  const op = clamp01(intensity);
+  return {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: `${yPct}%`,
+    height: heightPx,
+    transform: "translateY(-50%)",
+    pointerEvents: "none",
+    mixBlendMode: "screen",
+    opacity: Number(op.toFixed(3)),
+    background: `radial-gradient(ellipse 68% 44% at 50% 50%, #ffffff 0%, ${color} 26%, transparent 72%)`
+  };
+}
+
+/** Warm overexposure film-burn transition overlay style (p in [0, 1], peak at 0.5). */
+export function filmBurnOverlayStyle(p, { color = "#ff5a1f", warmColor = "#ffd27d" } = {}) {
+  const bell = Math.sin(clamp01(p) * Math.PI);
+  return {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+    mixBlendMode: "screen",
+    opacity: Number(clamp01(bell * 1.05).toFixed(3)),
+    background:
+      `radial-gradient(circle at ${(30 + p * 40).toFixed(1)}% ${(45 - bell * 12).toFixed(1)}%, ` +
+      `${warmColor} 0%, ${color} 42%, transparent 80%)`
+  };
+}
+
+/** Hitchcock Vertigo dolly-zoom styles (counter-animates perspective vs scale). */
+export function dollyZoomStyles(
+  p,
+  { fromPerspective = 2200, toPerspective = 680, fromScale = 0.88, toScale = 1.18 } = {}
+) {
+  const e = clamp01(p);
+  const persp = fromPerspective + (toPerspective - fromPerspective) * e;
+  const sc = fromScale + (toScale - fromScale) * e;
+  return {
+    stageStyle: { perspective: `${persp.toFixed(1)}px` },
+    contentStyle: { transform: `scale(${sc.toFixed(4)})` }
+  };
+}
+
+/** High-velocity snap crash-zoom style with coupled directional blur. */
+export function crashZoomStyle(t, start, dur = 0.36, { fromScale = 1, toScale = 2.6, blurMax = 10 } = {}) {
+  const p = seg(t, start, start + dur, ease.expoInOut);
+  const sc = fromScale + (toScale - fromScale) * p;
+  const vel = Math.sin(p * Math.PI);
+  const blur = vel * blurMax;
+  return {
+    transform: `scale(${sc.toFixed(4)})`,
+    filter: blur > 0.25 ? `blur(${blur.toFixed(2)}px)` : "none"
+  };
+}
+
+/**
+ * Ground-matched tactile texture overlay style with visible minimum tactility.
+ * Prevents dead/invisible (<0.10) texture overlays: dark grounds default to screen @ 0.24,
+ * light grounds default to multiply @ 0.34.
+ */
+export function textureOverlayStyle({ ground = "dark", blendMode = null, opacity = null } = {}) {
+  const isLight = ground === "light";
+  const resolvedBlend = blendMode || (isLight ? "multiply" : "screen");
+  const rawOp = typeof opacity === "number" ? opacity : isLight ? 0.34 : 0.24;
+  const safeOp = clamp(rawOp, 0.14, 0.85);
+  return {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    pointerEvents: "none",
+    mixBlendMode: resolvedBlend,
+    opacity: Number(safeOp.toFixed(3))
   };
 }

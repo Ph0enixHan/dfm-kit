@@ -7,7 +7,7 @@ description: >-
   and deterministic audio/caption auditing.
 ---
 
-# dfm-kit v0.9 (Remotion) — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v0.9.1 (Remotion) — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies added to your project).
 
@@ -50,15 +50,19 @@ Copy `dfm-remotion.js`, `dfm-time.js`, `dfm-motion.js`, `dfm-remotion.d.ts` (and
 - **`staggerProgress(i, t, { start, itemDur, step })`** -> `[0, 1]`
 - **`safeAreaBox(width, height, "social-strict" | "shorts" | "clean")`** -> `{ top, right, bottom, left, safeWidth, safeHeight, style }`
 
-### B. Deterministic Timing, Easing & Camera Physics (`./dfm/dfm-remotion`)
-- `seg(t, start, end, easeFn)`, `ease.{expoOut, expoIn, expoInOut, cubicOut, cubicIn, cubicInOut, backOut, quartOut, quadOut, whipIn}`, `clamp`, `clamp01`, `lerp`, `hash`, `lerpColor`
-- `anticipationPop(t, at, dur, { overshoot })` | `whipPan(t, cutAt, dur, opts)` | `portalZoom(t, cutAt, dur, opts)` | `ambientDrift(t, seed, opts)` | `radialWheelItem(i, total, rotDeg, opts)`
-- `stepTime(t, fps)` | `handheldStyle(t, opts)` | `impactShakeStyle(t, hitAt, opts)` | `gateWeaveStyle(t, opts)` -> ready-to-spread React `style` objects
+### B. Deterministic Timing, Easing & Cinema Optical Lens Kit (`./dfm/dfm-remotion`)
+- **Timing & Motion**: `seg(t, start, end, easeFn)`, `ease.{expoOut, expoIn, expoInOut, cubicOut, cubicIn, cubicInOut, backOut, quartOut, quadOut, whipIn}`, `clamp`, `clamp01`, `lerp`, `hash`, `lerpColor`
+- **Physical Primitives**: `anticipationPop(t, at, dur, { overshoot })` | `whipPan(t, cutAt, dur, opts)` | `portalZoom(t, cutAt, dur, opts)` | `ambientDrift(t, seed, opts)` | `radialWheelItem(i, total, rotDeg, opts)`
+- **Cinema Optical Lenses & Camera Physics (React-ready style / SVG filter helpers — use purposefully for narrative punctuation)**:
+  - `motionBlurFilterDef(id, dx, dy)` & `rgbSplitFilterDef(id, px, angleDeg)` -> declarative SVG `<filter>` params (`{ id, active, filterUrl, ... }`)
+  - `tiltShiftOverlayStyle({ focusY, bandPct, blurPx })` | `anamorphicFlareStyle({ yPct, color, intensity, heightPx })` | `filmBurnOverlayStyle(p, opts)`
+  - `dollyZoomStyles(p, opts)` -> `{ stageStyle, contentStyle }` | `crashZoomStyle(t, start, dur, opts)` -> `{ transform, filter }`
+  - `stepTime(t, fps)` | `handheldStyle(t, opts)` | `impactShakeStyle(t, hitAt, opts)` | `gateWeaveStyle(t, opts)`
+  - `textureOverlayStyle({ ground: "dark" | "light", blendMode, opacity })` -> calibrated visible texture overlay style (prevents invisible `<0.10` opacity)
 
 ### C. `./dfm/dfm-craft.css` & Real Tactile Textures
 - Procedural overlays: `.craft-grain`, `.craft-grain-heavy`, `.craft-halftone-print`, `.craft-halation`, `.craft-paper-fiber`, `.craft-vignette`, `.craft-scanlines`
 <!-- DFM_LOCAL_TEXTURES -->
-- In Remotion, place copied texture files in `public/textures/` and reference them with `staticFile("textures/...")`.
 
 ### D. Curated Google Fonts Casting (use `@remotion/google-fonts/*` or `@font-face` + `delayRender`)
 - **Editorial / Documentary**: `Instrument Serif` + `Noto Serif SC` + `JetBrains Mono`
@@ -90,11 +94,13 @@ Copy `dfm-remotion.js`, `dfm-time.js`, `dfm-motion.js`, `dfm-remotion.d.ts` (and
 
 ### Step 1: Lock Audio Timing + Write Director Brief (`brief.json`)
 - If narrated, measure the real voiceover duration first and set `durationInFrames = Math.ceil(seconds * fps)` in `src/Root.tsx`.
-- Write `brief.json` at the project root declaring `title`, `format: { width, height, aspect, fps, safePreset }`, `remotion: { entry: "src/index.ts", compositionId: "Main" }`, `concept`, `visualWorld`, `colorScript`, and `shots: [{ id, role, shotType, focalPoint, energy, start, duration, heroAt, transitionOut }]` (numeric `energy` 10–100). Set `"silent": true` only if explicitly requested.
+- Write `brief.json` at the project root declaring `title`, `format: { width, height, aspect, fps, safePreset }`, `remotion: { entry: "src/index.ts", compositionId: "Main" }`, `concept`, `visualWorld`, `colorScript`, and `shots: [{ id, role, shotType, focalPoint, energy, start, duration, heroAt, transitionOut }]` — choreograph a real numeric `energy` arc (10–100, span ≥ 20 across multi-beat films; Q3 flags flat energy curves). Set `"silent": true` only if explicitly requested.
 
 ### Step 2: Build the Continuous World (`src/*.tsx`)
-- Copy needed helpers from `<DFM_ROOT>/runtime/` into `src/dfm/`.
+- Copy `dfm-remotion.js`, `dfm-time.js`, `dfm-motion.js`, `dfm-remotion.d.ts`, and `dfm-craft.css` from `<DFM_ROOT>/runtime/` into `src/dfm/` (do not settle for bare `dfm-time.js` alone).
+- Match real tactile textures to your ground polarity: copy 1–2 files from the local texture catalog above into `public/textures/` and mount via `<Img src={staticFile("textures/...")} style={textureOverlayStyle({ ground: "dark" | "light" })} data-bleed="true" />` at clearly visible tactility (never `< 0.14` opacity), or stage user media from `public/`.
 - Load curated Google Fonts via `@remotion/google-fonts/*` (call `loadFont()` at module top level) or `@font-face`.
+- Vary framing scale, spatial geometry, and typographic placement dramatically across beats (never lock every beat into the same fixed top-title + center-box + bottom-caption slots).
 - Drive 100% of motion from `useCurrentFrame()` (`t = frameToTime(frame, fps)`); zero CSS `transition` / `animation` / Tailwind `animate-*`.
 
 ### Step 3: Mount Audio Cleanly (`<Audio>`)

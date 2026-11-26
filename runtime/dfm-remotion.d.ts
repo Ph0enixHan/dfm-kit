@@ -115,3 +115,44 @@ export function safeAreaBox(
   safeHeight: number;
   style: { position: "absolute"; left: number; top: number; width: number; height: number };
 };
+
+export function motionBlurFilterDef(
+  id?: string,
+  dx?: number,
+  dy?: number
+): { id: string; active: boolean; stdDeviation: string; filterUrl: string };
+export function rgbSplitFilterDef(
+  id?: string,
+  px?: number,
+  angleDeg?: number
+): { id: string; active: boolean; dx: number; dy: number; filterUrl: string };
+export function tiltShiftOverlayStyle(opts?: {
+  focusY?: number;
+  bandPct?: number;
+  blurPx?: number;
+}): Record<string, string | number>;
+export function anamorphicFlareStyle(opts?: {
+  yPct?: number;
+  color?: string;
+  intensity?: number;
+  heightPx?: number;
+}): Record<string, string | number>;
+export function filmBurnOverlayStyle(
+  p: number,
+  opts?: { color?: string; warmColor?: string }
+): Record<string, string | number>;
+export function dollyZoomStyles(
+  p: number,
+  opts?: { fromPerspective?: number; toPerspective?: number; fromScale?: number; toScale?: number }
+): { stageStyle: { perspective: string }; contentStyle: { transform: string } };
+export function crashZoomStyle(
+  t: number,
+  start: number,
+  dur?: number,
+  opts?: { fromScale?: number; toScale?: number; blurMax?: number }
+): { transform: string; filter: string };
+export function textureOverlayStyle(opts?: {
+  ground?: "dark" | "light";
+  blendMode?: string | null;
+  opacity?: number | null;
+}): Record<string, string | number>;

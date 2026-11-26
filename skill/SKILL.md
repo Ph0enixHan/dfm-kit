@@ -7,7 +7,7 @@ description: >-
   paginated sharp review boards with zero-crash QA, and native sound design.
 ---
 
-# dfm-kit v0.8 — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v0.9.1 — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies).
 
@@ -110,10 +110,10 @@ Copy only what you need into the project directory & import via `./`:
 ### Step 1: Lock Real Audio Timing + Inventory User Assets + Write Concise Director Brief (`brief.json`)
 - **If the film has spoken narration / voiceover**: Generate the voiceover **first** (`openfilm get tts` or user audio), read its real duration and caption timestamps, and lock `brief.json`'s total duration and beat timestamps (`start` / `duration`) directly to the real voiceover (`speed` stays `1.0` — never stretch/compress narration with `speed="0.77"`).
 - **Inventory the user's materials**: List attachments in the project (`.film/attachments`) and run `openfilm get my-media --kind image` / `--kind video` / `--kind audio`. Decide which are palette references (-> `dfm palette`) and which should be featured in the film.
-- Write `brief.json` declaring `title`, `format: { width, height, aspect, fps }`, `concept: { oneLineTreatment, emotion, tensionPair }`, `visualWorld: { medium, spatialArchitecture, continuityMethod }`, `colorScript: { harmony, roles, colorArc }`, and `shots: [{ id, file, role, shotType, focalPoint, energy, start, duration, heroAt, transitionOut }]` — use a **numeric `energy` (10–100)**. (Only set `"silent": true` if the user explicitly requested a silent piece.)
+- Write `brief.json` declaring `title`, `format: { width, height, aspect, fps }`, `concept: { oneLineTreatment, emotion, tensionPair }`, `visualWorld: { medium, spatialArchitecture, continuityMethod }`, `colorScript: { harmony, roles, colorArc }`, and `shots: [{ id, file, role, shotType, focalPoint, energy, start, duration, heroAt, transitionOut }]` — choreograph a real numeric `energy` arc (10–100, span ≥ 20 across multi-beat films; Q3 flags flat energy curves). (Only set `"silent": true` if the user explicitly requested a silent piece.)
 
 ### Step 2: Build the Continuous World (`scene.html` + `film.html`)
-Build a single deterministic `scene.html` using `createWorldCamera` / persistent spatial stage (copy only needed `./dfm-motion.js`, `./dfm-time.js`, `./dfm-lens.js`, or `./dfm-craft.css` locally). Load the cast Google Fonts explicitly and `await document.fonts.ready`; copy matching real textures/user media into `assets/` when the story fits; give every beat a distinct composition and a visible first frame.
+Build a single deterministic `scene.html` using `createWorldCamera` / persistent spatial stage (copy needed `./dfm-motion.js`, `./dfm-time.js`, `./dfm-lens.js`, `./dfm-craft.css` locally). Load the cast Google Fonts explicitly and `await document.fonts.ready`; copy 1–2 ground-matched real textures from the local catalog into `assets/` at clearly visible tactility (opacity `0.16–0.45`, never invisible `<0.10`) or stage user media when fitting; give every beat a distinct composition (never lock every beat to the same fixed top/bottom text slots) and a visible first frame.
 
 ### Step 3: Mandatory Default Sound Design & Continuous Bed (`film.html`)
 **Do NOT skip sound even when the user does not mention audio.** Every video needs a continuous sound bed plus frame-synced SFX unless the user explicitly requested silence (free local CC0 library first — zero credits):

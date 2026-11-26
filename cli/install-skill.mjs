@@ -25,13 +25,17 @@ export function getDefaultOpenFilmSkillsDir() {
   return path.join(os.homedir(), "Videos", "OpenFilm", "Skills");
 }
 
-export function buildLocalTextureCatalog(repoRoot, normalizedRoot) {
+export function buildLocalTextureCatalog(repoRoot, normalizedRoot, engine = "openfilm") {
   const manifestPath = path.join(repoRoot, "textures", "manifest.json");
   const webDir = path.join(repoRoot, "textures", "web");
   const imgRe = /\.(png|jpe?g|webp)$/i;
   const lines = [];
   let packs = 0;
   let files = 0;
+  const isRemotion = engine === "remotion";
+  const destHint = isRemotion
+    ? "project `public/textures/` and mount via `<Img src={staticFile('textures/...')} style={textureOverlayStyle({ ground: 'dark' | 'light' })} data-bleed=\"true\" />`"
+    : "project `assets/`";
 
   if (fs.existsSync(manifestPath)) {
     try {
@@ -72,7 +76,9 @@ export function buildLocalTextureCatalog(repoRoot, normalizedRoot) {
   }
   return {
     text:
-      "**Pre-baked ≤1200px real scan proxies detected on this machine** — copy 1–2 matching files directly into project `assets/` (zero ffmpeg wait) whenever paper, print halftone, or analog film tactility fits the story:\n" +
+      `**Pre-baked ≤1200px real scan proxies detected on this machine** — copy 1–2 ground-matched files directly into ${destHint} (zero ffmpeg wait). Match ground polarity and keep tactile opacity clearly visible (never < 0.14):\n` +
+      `- **Dark grounds**: prefer \`analog-film-bg\` (\`screen\`, opacity \`0.22–0.38\`), \`grainy-film-overlays\` (\`screen\`, \`0.18–0.34\`), or \`film-borders\` (\`screen\`, \`0.55–0.85\`).\n` +
+      `- **Light grounds**: prefer \`cardboard-paper\` (\`multiply\`, opacity \`0.26–0.45\`), \`crumpled-paper\` (\`multiply\`, \`0.38–0.65\`, great for 8–12fps Paper Boil), or \`halftone-pack\` (\`multiply\`, \`0.16–0.30\`).\n` +
       lines.join("\n"),
     packs,
     files
@@ -93,7 +99,7 @@ export function installOpenFilmSkill(customSkillsDir, { engine = "openfilm" } = 
   fs.mkdirSync(destDir, { recursive: true });
 
   const normalizedRoot = REPO_ROOT.replaceAll("\\", "/");
-  const catalog = buildLocalTextureCatalog(REPO_ROOT, normalizedRoot);
+  const catalog = buildLocalTextureCatalog(REPO_ROOT, normalizedRoot, normEngine);
   const content = fs
     .readFileSync(targetSpec.file, "utf8")
     .replaceAll("<DFM_ROOT>", normalizedRoot)

@@ -129,6 +129,21 @@ function scanShotSource(filePath) {
     });
   }
 
+  // Flag near-invisible (<0.08) texture overlays (e.g. paper.jpg at opacity: 0.045 on black ground)
+  for (const m of styleCorpus.matchAll(
+    /(?:paper|grain|film|halftone|texture|cardboard|crumpled|overlay)[^;\n<>]{0,220}opacity\s*[:=]\s*["']?(0?\.\d+)["']?/gi
+  )) {
+    const op = Number(m[1]);
+    if (Number.isFinite(op) && op > 0 && op < 0.08) {
+      issues.push({
+        rule: "Q14",
+        level: "Fix",
+        msg: `Texture overlay opacity is nearly invisible (${op}) — match the texture pack to your ground polarity at visible tactility (0.16–0.45) or remove the dead layer`
+      });
+      break;
+    }
+  }
+
   // Flag missing custom typefaces: any visible text relying on bare system fallback fonts
   const hasCustomFont = /fonts\.googleapis\.com|fonts\.gstatic\.com|@font-face|\.woff2?\b|\.ttf\b|\.otf\b/i.test(styleCorpus);
   const hasVisibleText = /font-family\s*:|<h[1-6]\b|<p\b|<text\b|fillText\s*\(/i.test(styleCorpus);
@@ -214,6 +229,19 @@ function scanRemotionProject(absProject, brief) {
     }
     if (/linear-gradient\s*\([^)]*#ffffff(?:[5-9a-f]{2}|[5-9a-f])\b[^)]*transparent/i.test(src)) {
       issues.push({ rule: "Q14", level: "Fix", msg: `${rel}: Glossy diagonal white linear-gradient highlight detected — use clean matte OKLCH surfaces or real tactile textures` });
+    }
+    for (const tm of src.matchAll(
+      /(?:paper|grain|film|halftone|texture|cardboard|crumpled|overlay)[^;\n<>]{0,220}opacity\s*[:=]\s*\{?\s*(0?\.\d+)\s*\}?/gi
+    )) {
+      const op = Number(tm[1]);
+      if (Number.isFinite(op) && op > 0 && op < 0.08) {
+        issues.push({
+          rule: "Q14",
+          level: "Fix",
+          msg: `${rel}: Texture overlay opacity is nearly invisible (${op}) — match the texture pack to your ground polarity at visible tactility (0.16–0.45, e.g. textureOverlayStyle()) or remove the dead layer`
+        });
+        break;
+      }
     }
 
     // Remotion <Audio> / <Html5Audio> inspection
@@ -449,9 +477,18 @@ export function runAudit(projectDir, { engine = null } = {}) {
       case "Q3": {
         if (brief?.shots?.length >= 2) {
           const energies = brief.shots.map((s) => parseEnergyValue(s.energy));
-          const span = Math.max(...energies) - Math.min(...energies);
-          notes.push(`Energy range ${span} (check pacing across review-board*.png)`);
-          status = "Pass";
+          const maxE = Math.max(...energies);
+          const span = maxE - Math.min(...energies);
+          const minSpan = maxE <= 10 ? 2 : 15;
+          if (brief.shots.length >= 3 && span < minSpan) {
+            status = "Fix";
+            notes.push(
+              `Flat energy curve (range ${span} across ${brief.shots.length} beats) — choreograph real pacing contrast (calm setup -> rising tension -> climax -> resolve) instead of uniform energy`
+            );
+          } else {
+            notes.push(`Energy range ${span} (check pacing across review-board*.png)`);
+            status = "Pass";
+          }
         } else {
           status = "Review";
           notes.push("Inspect pacing and narrative tension on review-board.png");
@@ -537,6 +574,38 @@ export function runAudit(projectDir, { engine = null } = {}) {
           notes.push(
             `Visual layout repetition: mean structural similarity ${(lv.meanPairwiseSimilarity * 100).toFixed(0)}%, ${lv.highSimPairPct}% of beat pairs look near-identical — vary framing geometry, shot scale, and visual metaphor per beat instead of repeating one layout template`
           );
+        }
+        if (board?.shots?.length >= 5) {
+          const topAnchors = [];
+          const botAnchors = [];
+          for (const s of board.shots) {
+            const visible = (s.dom?.boxes || []).filter((b) => !b.bleed && b.w >= 60);
+            if (visible.length >= 2) {
+              const sorted = [...visible].sort((a, b) => a.y - b.y);
+              topAnchors.push(sorted[0]);
+              botAnchors.push(sorted[sorted.length - 1]);
+            }
+          }
+          if (topAnchors.length >= 5) {
+            const clusterMax = (arr, checkX) => {
+              let best = 0;
+              for (const ref of arr) {
+                const cnt = arr.filter(
+                  (o) => Math.abs(o.y - ref.y) <= 28 && (!checkX || Math.abs(o.x - ref.x) <= 28)
+                ).length;
+                if (cnt > best) best = cnt;
+              }
+              return best;
+            };
+            const topLocked = clusterMax(topAnchors, true);
+            const botLocked = clusterMax(botAnchors, false);
+            if (topLocked / topAnchors.length >= 0.8 && botLocked / botAnchors.length >= 0.8) {
+              status = "Fix";
+              notes.push(
+                `Fixed top/bottom template slots detected (${topLocked}/${topAnchors.length} beats share identical top/bottom text coordinates) — vary shot scale, typographic placement, and visual hierarchy across beats`
+              );
+            }
+          }
         }
         break;
       }
