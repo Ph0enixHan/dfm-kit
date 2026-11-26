@@ -7,7 +7,7 @@ description: >-
   and deterministic audio/caption auditing.
 ---
 
-# dfm-kit v0.9.1 (Remotion) — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v0.9.2 (Remotion) — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies added to your project).
 
@@ -78,14 +78,17 @@ Copy `dfm-remotion.js`, `dfm-time.js`, `dfm-motion.js`, `dfm-remotion.d.ts` (and
 
 1. **Form & Ground Color Grow Strictly from Content**: Choose any medium (2D vector, Canvas, WebGL/Three.js, 3D macro UI, archival collage, kinetic typography) and any color discipline.
 2. **Filmic Color Script First (60-30-10)**: Extract exact OKLCH palettes from any reference still via `dfm palette`, or define dominant ground, support surface, ink, and restrained focal accent in `brief.json`.
-3. **Real Spatial Stage — Zero Slide-Switchers & Zero Template Loops**: Place beats in one continuous spatial world (`#world` + `createWorldCamera` + `worldCameraStyle`) or a persistent morphing canvas. Every beat earns its own visual metaphor, scale, and layout geometry — never repeat one 2-line template across beats (`dfm check` measures structural similarity in Q10).
+3. **Real Cinema Camera & Shot-Scale Variety — Zero Slide-Switchers, Zero Sideways Carousels, Zero 3-Band Poster Loops**:
+   - Place beats in ONE continuous 3D spatial world (`#world` + `createWorldCamera` + `worldCameraStyle`, combining X/Y/Z depth, scale jumps, subtle rotation, and velocity blur) or a persistent morphing canvas.
+   - **Never build a 1D sideways carousel** (lining up N full-screen pages at uniform `i * spacing` and pushing them horizontally like Keynote Push slides).
+   - **Break the 3-band poster formula**: Never repeat "top-left title + centered illustration + bottom-left caption" across consecutive beats. Alternate visual architectures dramatically (full-bleed oversized type -> macro detail plunge -> split 2-column comparison -> off-center crop with overlaid callout -> wide architectural resolve). Keep un-narrated beats tight (1.5–3.2s; avoid >6s near-static holds).
 4. **Truth to Medium & Authentic Assets**: Keep 2D/3D planes crisp, matte, and architectural (no `conic-gradient` faux metal, no thick 0-blur offset `box-shadow`, no glossy diagonal white plastic glare). Use real tactile textures in `public/` or real photography (`<Img src={staticFile(...)} />`) when realism or tactility serves the story.
 5. **Pure Cinema Frame & Non-Blank Openings**: Omit corner page counters, numbered section eyebrows, and slide headers/footers. Every beat must show a visible subject from its opening frame (no solid blank white/black openings).
-6. **Platform Safe-Zone Discipline (`format.safePreset`)**:
+6. **Full-Bleed Frame + Safe-Zone Text Discipline (`format.safePreset`)**:
    - **`social-strict` (default 9:16 — TikTok / Reels / Douyin / Xiaohongshu)**: `top 12.5% (240px)`, `right 14% (150px)`, `bottom 22% (420px)`, `left 6% (65px)`.
    - **`shorts` (YouTube Shorts)**: `top 10%`, `right 11%`, `bottom 18%`, `left 5.5%`.
    - **`clean` (default 16:9 / portfolio)**: `top 8%`, `right 6%`, `bottom 8%`, `left 6%`.
-   - Use `safeAreaBox(width, height, preset)` to keep all headlines and focal subjects strictly inside the safe box while backgrounds/textures bleed 100% edge-to-edge (`data-bleed="true"`).
+   - Use `safeAreaBox(width, height, preset)` to position **primary headlines and key copy** strictly inside the safe box — **never clip `#world` or visual art inside a safe-zone `<clipPath>` / `overflow: hidden` box**. Backgrounds, textures, illustrations, and camera travel must bleed 100% edge-to-edge across the full frame (`data-bleed="true"`).
 7. **Single-Track Captions**: If mounting a caption track / `.vtt`, never duplicate verbatim spoken sentences inside the scene graphics.
 
 ---

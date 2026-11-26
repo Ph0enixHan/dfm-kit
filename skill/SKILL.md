@@ -7,7 +7,7 @@ description: >-
   paginated sharp review boards with zero-crash QA, and native sound design.
 ---
 
-# dfm-kit v0.9.1 — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v0.9.2 — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies).
 
@@ -84,7 +84,8 @@ Copy only what you need into the project directory & import via `./`:
 3. **Real Spatial Stage — Zero Slide-Switchers & Zero Template Loops**:
    - **Never** stack isolated full-screen `.beat` / `.slide` boxes at `inset: 0` and toggle them via `display: none` or `visibility: hidden` (even with a fake color wipe overlaid on top). That architecture physically forces a slide-deck feel.
    - **Instead**, build ONE continuous spatial world (`<div id="world">` placed at real `(x, y, z, rx, ry, rz)` coordinates flown by `createWorldCamera`, or ONE persistent Canvas/SVG world where the hero object/camera continuously dives, pans, orbits, or morphs across space).
-   - **Every beat earns its own composition**: Vary visual geometry, shot scale, and metaphor dramatically from beat to beat (macro detail -> angled 3D perspective -> full-bleed oversized type -> tight portal dive -> wide architectural resolve). A single layout recipe re-skinned with new text for each beat reads as a template loop — `dfm check` measures structural similarity between beats and flags it.
+   - **Never build a 1D sideways carousel**: Do not line up N full-screen pages at uniform `i * spacing` and push them horizontally like Keynote Push slides. Direct real shot-scale jumps (wide -> macro detail plunge -> full-bleed oversized type -> angled 3D perspective -> wide resolve) with `createWorldCamera` depth, scale shifts, and velocity blur.
+   - **Every beat earns its own composition**: Break the 3-band poster formula ("top-left title + centered graphic + bottom-left caption"). Vary visual geometry, shot scale, and typographic placement dramatically across beats — `dfm check` measures both structural similarity and fixed top/bottom text slots in Q10.
 4. **Truth to Medium & Authentic Assets (Zero Cheap Faux-3D or Fake Gradients)**:
    - **Use 3D for Camera & Spatial Depth — NOT Fake CSS Props**: Keep individual planes honest, crisp, matte, and architectural (pure OKLCH solid fills, razor-sharp `1px` hairline borders, bold geometric vectors, authentic cast typography) flying inside real 3D camera space (`createWorldCamera`).
    - **Never Fake Real Materials with CSS Gradients**: Do NOT use `conic-gradient` to imitate brushed metal, diagonal white `#fff...transparent` streaks to imitate glossy glass/plastic, `radial-gradient` balls to imitate 3D spheres, or thick 0-blur offset `box-shadow` hacks (`15px 20px 0`) to fake slab thickness.
@@ -94,8 +95,8 @@ Copy only what you need into the project directory & import via `./`:
    - Instead, direct a **high-velocity 10–18s continuous visual story or transformation** (average **1.2–2.4s per beat**): e.g., a live *Before -> Deconstruction/Transformation -> After* arc, or a single-take camera flight diving directly inside one living workspace/instrument. Keep every held beat subtly alive with `ambientDrift` and stagger secondary motion by 60–90ms.
    - **Optional Cinema Director's Menu (reach for 1–2 when fitting — never mandatory)**: directional `lens.motionBlur` / `lens.rgbSplit` on high-velocity moves, `lens.impactShake` on punch cuts, `lens.fisheye` / `lens.flutedGlass` / `lens.filmBurn` for optical signature, softly defocused foreground parallax occluders, or an optional tonal polarity shift at the narrative climax.
 6. **Pure Cinema Frame**: Treat the viewport as a cinema screen rather than a slide deck. Keep only the narrative subject, visual metaphors, and expressive hero copy — omit corner page counters, numbered section eyebrows, and decorative slide headers/footers. Every beat shows a visible subject from its very first frame (no solid-blank openings).
-7. **Platform Safe-Zone Discipline (`format.safePreset`)**:
-   - Backgrounds, atmospheric textures, and `data-bleed` graphics fill 100% of the canvas edge-to-edge; keep **all primary headlines, key metrics, and focal subjects** strictly inside the active safe zone:
+7. **Full-Bleed Frame + Safe-Zone Text Discipline (`format.safePreset`)**:
+   - Backgrounds, atmospheric textures, graphics, and camera travel must bleed 100% edge-to-edge across the full canvas — **never wrap `#world` inside a safe-zone `<clipPath>` / `overflow: hidden` picture frame**. Keep **primary headlines, key metrics, and focal copy** strictly inside the active safe zone:
      - **`social-strict` (default for 9:16 vertical — TikTok / Reels / Douyin / Xiaohongshu)**: `top 12.5% (240px)`, `right 14% (150px for like/share rail)`, `bottom 22% (420px for captions/HUD)`, `left 6% (65px)` -> safe box `x: 65-930, y: 240-1500` on `1080x1920`.
      - **`shorts` (when user specifies YouTube Shorts)**: `top 10% (190px)`, `right 11% (120px)`, `bottom 18% (340px)`, `left 5.5% (60px)`.
      - **`clean` (default for 16:9 / portfolio / no social HUD)**: `top 8%`, `right 6%`, `bottom 8%`, `left 6%`.

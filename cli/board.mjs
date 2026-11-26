@@ -386,7 +386,7 @@ export async function measureShotDom(browser, width, height, safeArea = null) {
     );
     const hasFinishing = Boolean(document.querySelector('.dfm-finishing'));
 
-    const allEls = [...document.querySelectorAll('h1,h2,h3,h4,p,span,div,svg,figure,img,hr')];
+    const allEls = [...document.querySelectorAll('h1,h2,h3,h4,p,span,div,svg,text,figure,img,hr')];
     const boxes = [];
     const fontSizes = [];
     const safeViolations = [];
@@ -402,9 +402,12 @@ export async function measureShotDom(browser, width, height, safeArea = null) {
       const planeName = planeEl ? planeEl.getAttribute('data-plane') : 'mg';
       const isBleed = el.hasAttribute('data-bleed') || Boolean(el.closest('[data-bleed="true"]')) || planeName === 'ebg' || planeName === 'bg';
 
-      const hasDirectText = [...el.childNodes].some(
-        (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
-      );
+      const isSvgText = el.tagName.toLowerCase() === 'text';
+      const hasDirectText = isSvgText
+        ? el.textContent.trim().length > 0
+        : [...el.childNodes].some(
+            (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
+          );
       const isFocal = el.hasAttribute('data-focal') || el.hasAttribute('data-element');
       if (!hasDirectText && !isFocal) continue;
 
@@ -441,7 +444,7 @@ export async function measureShotDom(browser, width, height, safeArea = null) {
         const isHeadline =
           hasDirectText &&
           effOp >= 0.45 &&
-          (/^H[1-3]$/.test(el.tagName) || parseFloat(style.fontSize) >= 36);
+          (/^H[1-3]$/.test(el.tagName) || parseFloat(style.fontSize) >= 36 || (isSvgText && rect.height >= 42));
         const outsideSafe =
           (isFocal || isHeadline) &&
           (rect.left < safeBox.left - 8 ||

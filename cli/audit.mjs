@@ -19,6 +19,41 @@ const RUBRIC_PATH = path.resolve(__dirname, "..", "spec", "rubric.json");
 
 const TAILWIND_CLICHE_HEXES = ["#3b82f6", "#f97316", "#ef4444", "#22c55e", "#a855f7"];
 
+function detectAntiCinemaTraps(src, relPrefix = "") {
+  const found = [];
+  const p = relPrefix ? `${relPrefix}: ` : "";
+
+  // 1. Safe-zone clip box trapping the entire world inside a picture frame
+  if (
+    /<clipPath\b[^>]*id=["'][^"']*safe[^"']*["']/i.test(src) ||
+    /clipPath\s*=\s*["'`]url\(#[^"'`]*safe[^"'`]*\)["'`]/i.test(src)
+  ) {
+    found.push({
+      rule: "Q15",
+      level: "Fix",
+      msg: `${p}World/stage is clipped inside a safe-zone rectangle (<clipPath id='...safe...'>) — safe zones constrain text placement only; graphics, backgrounds, and camera moves must bleed edge-to-edge across the full cinema frame`
+    });
+  }
+
+  // 2. 1D horizontal carousel slide-strip (beats lined up at i * spacing and pushed sideways with zero 3D/scale camera)
+  const hasUniformRowStrip =
+    /translate(?:X)?\s*\(\s*\$\{[^}]*\*\s*(?:spacing|width|1080|11\d\d|12\d\d|1920)\b/i.test(src) ||
+    /translate(?:X)?\s*\(\s*\$\{[^}]*(?:spacing|slideWidth|pageWidth)\s*\*\s*[a-z_$]/i.test(src);
+  const hasHorizontalPush =
+    /translate\s*\(\s*\$\{\s*-\s*(?:spacing|slideWidth|pageWidth|1080|11\d\d|1920)\s*\*/i.test(src) ||
+    /translateX\s*\(\s*\$\{\s*-\s*(?:spacing|slideWidth|pageWidth|1080|11\d\d|1920)\s*\*/i.test(src);
+  const hasRichCamera = /createWorldCamera|worldCameraStyle|perspective\s*:|rotateX|rotateY|dollyZoom|crashZoom|portalZoom/i.test(src);
+  if (hasUniformRowStrip && hasHorizontalPush && !hasRichCamera) {
+    found.push({
+      rule: "Q11",
+      level: "Fix",
+      msg: `${p}1D horizontal carousel slide-strip detected (beats lined up at uniform horizontal spacing and pushed sideways like Keynote Push slides) — use real 3D camera depth (createWorldCamera / Z-scale jumps / match-cut morphs) instead of flat sideways slide pushing`
+    });
+  }
+
+  return found;
+}
+
 function scanShotSource(filePath) {
   const src = fs.readFileSync(filePath, "utf8");
   const issues = [];
@@ -155,6 +190,10 @@ function scanShotSource(filePath) {
     });
   }
 
+  for (const trap of detectAntiCinemaTraps(src)) {
+    issues.push(trap);
+  }
+
   return issues;
 }
 
@@ -210,6 +249,9 @@ function scanRemotionProject(absProject, brief) {
       const twAnim = src.match(/className=["'`][^"'`]*\b(animate-(?:bounce|ping|pulse|spin)|transition(?:-(?:all|colors|opacity|transform))?)\b[^"'`]*["'`]/);
       if (twAnim) {
         issues.push({ rule: "Q11", level: "Fix", msg: `${rel}: Tailwind "${twAnim[1]}" class detected — Tailwind CSS transitions/animations break deterministic Remotion rendering; animate with useCurrentFrame()` });
+      }
+      for (const trap of detectAntiCinemaTraps(src, rel)) {
+        issues.push(trap);
       }
     } else {
       if (/@keyframes\b|\btransition\s*:|\banimation\s*:/i.test(src)) {
@@ -616,6 +658,9 @@ export function runAudit(projectDir, { engine = null } = {}) {
           const sluggishLongBeats = board.shots.filter(
             (s) => typeof s.motionDelta === "number" && s.duration >= 3.5 && s.motionDelta >= 0.8 && s.motionDelta < 3.2
           );
+          const stalledHeroBeats = board.shots.filter(
+            (s) => typeof s.motionDelta === "number" && s.duration >= 6.5 && s.motionDelta >= 0.8 && s.motionDelta < 4.0
+          );
           if (staticBeats.length) {
             status = "Fix";
             notes.push(
@@ -625,6 +670,11 @@ export function runAudit(projectDir, { engine = null } = {}) {
             status = "Fix";
             notes.push(
               `${sluggishLongBeats.length} long beats (>=3.5s) have low motion delta (${sluggishLongBeats.map((s) => `${s.id}:Δ${s.motionDelta}`).join(", ")}) — tighten pacing or add continuous camera/subject motion so beats don't sit like held slides`
+            );
+          } else if (stalledHeroBeats.length >= 1) {
+            status = "Fix";
+            notes.push(
+              `${stalledHeroBeats.map((s) => `${s.id} (${s.duration}s, Δ${s.motionDelta})`).join(", ")} holds too long with minimal motion — break long holds into active visual progression or tighten beat duration`
             );
           } else if (!notes.length) {
             const avgDelta = (board.shots.reduce((a, s) => a + (s.motionDelta || 0), 0) / board.shots.length).toFixed(1);
