@@ -1,7 +1,7 @@
 {
   "name": "dfm-kit",
-  "version": "0.8.0",
-  "description": "Fast, style-agnostic Design-for-Motion director toolkit, OKLCH Color Script engine, 13-API cinema optical lens kit, and 1-board visual microscope for programmatic video (OpenFilm built-in; Hyperframes & Remotion planned).",
+  "version": "0.9.0",
+  "description": "Fast, style-agnostic Design-for-Motion director toolkit, OKLCH Color Script engine, 13-API cinema optical lens kit, and paginated visual microscope for programmatic video (OpenFilm & Remotion built-in; Hyperframes planned).",
   "type": "module",
   "bin": {
     "dfm": "./cli/dfm.mjs"

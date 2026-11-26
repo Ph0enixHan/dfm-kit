@@ -11,7 +11,10 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
-const SRC_SKILL = path.join(REPO_ROOT, "skill", "SKILL.md");
+const SRC_SKILLS = {
+  openfilm: { file: path.join(REPO_ROOT, "skill", "SKILL.md"), folder: "dfm-kit" },
+  remotion: { file: path.join(REPO_ROOT, "skill", "SKILL.remotion.md"), folder: "dfm-kit-remotion" }
+};
 
 export function getDefaultOpenFilmSkillsDir() {
   if (process.env.DFM_OPENFILM_SKILLS) return process.env.DFM_OPENFILM_SKILLS;
@@ -76,24 +79,35 @@ export function buildLocalTextureCatalog(repoRoot, normalizedRoot) {
   };
 }
 
-export function installOpenFilmSkill(customSkillsDir) {
-  if (!fs.existsSync(SRC_SKILL)) {
-    throw new Error(`Skill template not found: ${SRC_SKILL}`);
+export function installOpenFilmSkill(customSkillsDir, { engine = "openfilm" } = {}) {
+  const normEngine = String(engine || "openfilm").trim().toLowerCase();
+  const targetSpec = SRC_SKILLS[normEngine];
+  if (!targetSpec) {
+    throw new Error(`Unsupported skill engine "${engine}". Supported: openfilm, remotion`);
+  }
+  if (!fs.existsSync(targetSpec.file)) {
+    throw new Error(`Skill template not found: ${targetSpec.file}`);
   }
   const skillsRoot = customSkillsDir ? path.resolve(customSkillsDir) : getDefaultOpenFilmSkillsDir();
-  const destDir = path.join(skillsRoot, "dfm-kit");
+  const destDir = path.join(skillsRoot, targetSpec.folder);
   fs.mkdirSync(destDir, { recursive: true });
 
   const normalizedRoot = REPO_ROOT.replaceAll("\\", "/");
   const catalog = buildLocalTextureCatalog(REPO_ROOT, normalizedRoot);
   const content = fs
-    .readFileSync(SRC_SKILL, "utf8")
+    .readFileSync(targetSpec.file, "utf8")
     .replaceAll("<DFM_ROOT>", normalizedRoot)
     .replaceAll("<!-- DFM_LOCAL_TEXTURES -->", catalog.text);
 
   const destFile = path.join(destDir, "SKILL.md");
   fs.writeFileSync(destFile, content, "utf8");
-  return { destFile, repoRoot: normalizedRoot, texturePacksCount: catalog.packs, textureFilesCount: catalog.files };
+  return {
+    engine: normEngine,
+    destFile,
+    repoRoot: normalizedRoot,
+    texturePacksCount: catalog.packs,
+    textureFilesCount: catalog.files
+  };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

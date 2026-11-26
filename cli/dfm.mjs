@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * dfm.mjs (v0.8) — Fast Style-Agnostic Design-for-Motion Visual Microscope & Color Script CLI
- * Zero npm dependencies (Node 22+ built-in WebSocket/http + local Chrome/Edge CDP).
+ * dfm.mjs (v0.9) — Fast Style-Agnostic Design-for-Motion Visual Microscope & Color Script CLI
+ * Supports OpenFilm & Remotion (zero npm dependencies; Node 22+ built-in WebSocket/http + Chrome/Edge CDP).
  */
 
 import fs from "node:fs";
@@ -14,35 +14,69 @@ import { extractPaletteFromImage } from "./palette.mjs";
 import { snapFrames } from "./snap.mjs";
 import { installOpenFilmSkill } from "./install-skill.mjs";
 
-const rawArgs = process.argv.slice(2);
-const flags = new Set(rawArgs.filter((a) => a.startsWith("--")));
-const posArgs = rawArgs.filter((a) => !a.startsWith("--"));
+function parseCliArgs(argv) {
+  const flags = new Set();
+  const opts = {};
+  const posArgs = [];
+  const valueFlags = new Set(["--engine", "--comp", "--serve-url"]);
+
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith("--")) {
+      const eq = a.indexOf("=");
+      if (eq > 0) {
+        const k = a.slice(0, eq);
+        opts[k.slice(2)] = a.slice(eq + 1);
+      } else if (valueFlags.has(a) && i + 1 < argv.length) {
+        opts[a.slice(2)] = argv[++i];
+      } else {
+        flags.add(a);
+      }
+    } else {
+      posArgs.push(a);
+    }
+  }
+  return { flags, opts, posArgs };
+}
+
+const { flags, opts, posArgs } = parseCliArgs(process.argv.slice(2));
 const [cmd, targetArg, extraArg, thirdArg] = posArgs;
 const isFull = flags.has("--full");
+const rebuild = flags.has("--rebuild");
+const engineOpt = opts.engine || null;
+const compOpt = opts.comp || null;
+const serveUrlOpt = opts["serve-url"] || null;
 
 function printHelp() {
   console.log(`
-dfm-kit v0.8 — Style-agnostic Design-for-Motion visual microscope & Color Script CLI for programmatic video
+dfm-kit v0.9 — Style-agnostic Design-for-Motion visual microscope & Color Script CLI (OpenFilm & Remotion)
 
 Usage:
-  node cli/dfm.mjs check         <projectDir> [--full]    Render fast review board(s) (<=6 beats/page) + Q1-Q16 audit (--full for 5 HD boards)
-  node cli/dfm.mjs snap          <htmlFile> <t1,t2,...>   Instant 1-2s frame inspector (e.g. snap scene.html 1.2,3.5,6.0)
+  node cli/dfm.mjs check         <projectDir> [--full] [--engine openfilm|remotion] [--comp <Id>] [--serve-url <url>] [--rebuild]
+                                 Render sharp review board(s) (<=6 beats/page) + 0.25s crash sweep + Q1-Q16 QA
+  node cli/dfm.mjs snap          <htmlOrRemotionDir> <t1,t2,...> [outPath] [--comp <Id>] [--serve-url <url>]
+                                 Instant 1-3s frame inspector (e.g. snap scene.html 1.2,3.5 or snap . 1.2,3.5)
   node cli/dfm.mjs palette       <imagePath> [outDir]     Extract OKLCH Color Script, swatch PNG & theme CSS from any reference image
   node cli/dfm.mjs to-openfilm   <projectDir> [draftName] Package & sync directly into OpenFilm Studio Projects
-  node cli/dfm.mjs install-skill [skillsDir]              Install the dfm-kit skill into OpenFilm Studio with your local repo path
-  node cli/dfm.mjs preview       <projectDir>             Render 30fps MP4 preview (for headless CLI outside Studio)
+  node cli/dfm.mjs install-skill [skillsDir] [--engine openfilm|remotion]
+                                 Install dfm-kit (OpenFilm) or dfm-kit-remotion skill with local repo path & texture catalog
+  node cli/dfm.mjs preview       <projectDir>             Render 30fps MP4 preview (OpenFilm headless CLI outside Studio)
   node cli/dfm.mjs board         <projectDir> [--full]    Render diagnostic board(s) only
   node cli/dfm.mjs audit         <projectDir>             Run Q1-Q16 QA audit only
-  node cli/dfm.mjs init          <targetDir>              Scaffold a style-free brief.json starter
+  node cli/dfm.mjs init          <targetDir> [--engine openfilm|remotion]
+                                 Scaffold a style-free brief.json starter
 `);
 }
 
-function initStarter(targetDir) {
+function initStarter(targetDir, engine = "openfilm") {
   const abs = path.resolve(targetDir);
   fs.mkdirSync(abs, { recursive: true });
   const briefTemplate = {
     title: "Untitled Film",
-    format: { width: 1080, height: 1920, aspect: "9:16", fps: 30 },
+    format: { width: 1080, height: 1920, aspect: "9:16", fps: 30, safePreset: "social-strict" },
+    ...(engine === "remotion"
+      ? { remotion: { entry: "src/index.ts", compositionId: "Main" } }
+      : {}),
     concept: {
       oneLineTreatment: "Describe the core visual metaphor in one sentence (let form grow from content).",
       emotion: "Primary emotional tone",
@@ -69,7 +103,7 @@ function initStarter(targetDir) {
     shots: [
       {
         id: "beat1",
-        file: "scene.html",
+        ...(engine === "remotion" ? {} : { file: "scene.html" }),
         role: "establishing",
         shotType: "wide",
         focalPoint: "Primary focal subject",
@@ -84,11 +118,11 @@ function initStarter(targetDir) {
   if (!fs.existsSync(briefOut)) {
     fs.writeFileSync(briefOut, JSON.stringify(briefTemplate, null, 2), "utf8");
   }
-  console.log(`Initialized Director Brief starter: ${briefOut}`);
+  console.log(`Initialized Director Brief starter (${engine}): ${briefOut}`);
 }
 
 function printAuditTable(audit) {
-  console.log("\n================= Q1-Q16 Design for Motion QA Report (v0.8) =================");
+  console.log("\n================= Q1-Q16 Design for Motion QA Report (v0.9) =================");
   for (const r of audit.results) {
     const tag =
       r.status === "Pass"
@@ -114,8 +148,8 @@ async function main() {
   }
 
   if (cmd === "install-skill") {
-    const res = installOpenFilmSkill(targetArg);
-    console.log(`Installed dfm-kit skill to: ${res.destFile}`);
+    const res = installOpenFilmSkill(targetArg, { engine: engineOpt || "openfilm" });
+    console.log(`Installed dfm-kit (${res.engine}) skill to: ${res.destFile}`);
     console.log(`Bound local repo root: ${res.repoRoot}`);
     console.log(`Local texture packs injected: ${res.texturePacksCount} (${res.textureFilesCount} files)`);
     return;
@@ -127,13 +161,18 @@ async function main() {
   }
 
   if (cmd === "init") {
-    initStarter(targetArg);
+    initStarter(targetArg, engineOpt || "openfilm");
     return;
   }
 
   if (cmd === "snap") {
-    const res = await snapFrames(targetArg, extraArg || "1.0", thirdArg || null);
-    console.log(`Snapshot saved (${res.width}x${res.height}): ${res.outPath}`);
+    const res = await snapFrames(targetArg, extraArg || "1.0", thirdArg || null, {
+      engine: engineOpt,
+      comp: compOpt,
+      serveUrl: serveUrlOpt,
+      rebuild
+    });
+    console.log(`Snapshot saved (${res.engine}, ${res.width}x${res.height}): ${res.outPath}`);
     for (const f of res.frames) {
       console.log(`  - t=${f.t}s: clips=${f.clips}, safeViolations=${f.safeViolations}`);
     }
@@ -168,9 +207,17 @@ async function main() {
   }
 
   if (cmd === "board" || cmd === "check") {
-    console.log(`Rendering ${isFull ? "5 HD diagnostic boards + review board" : "fast all-in-one review board"}: ${path.resolve(targetArg)} ...`);
-    const { outputs } = await generateBoards(targetArg, { full: isFull });
-    console.log("Board(s) generated:");
+    console.log(
+      `Rendering ${isFull ? "5 HD diagnostic boards + review board" : "fast review board(s)"}: ${path.resolve(targetArg)} ...`
+    );
+    const { report, outputs } = await generateBoards(targetArg, {
+      full: isFull,
+      engine: engineOpt,
+      comp: compOpt,
+      serveUrl: serveUrlOpt,
+      rebuild
+    });
+    console.log(`Board(s) generated (engine=${report.engine}${report.compositionId ? `, comp=${report.compositionId}` : ""}):`);
     const pages = outputs.reviewBoards || [outputs.reviewBoard];
     if (pages.length > 1) {
       pages.forEach((p, i) => console.log(`  - Review Board ${i + 1}/${pages.length}: ${p}`));
@@ -188,7 +235,7 @@ async function main() {
   }
 
   if (cmd === "audit" || cmd === "check") {
-    const audit = runAudit(targetArg);
+    const audit = runAudit(targetArg, { engine: engineOpt });
     printAuditTable(audit);
     if (audit.summary.blocker > 0) {
       process.exitCode = 2;

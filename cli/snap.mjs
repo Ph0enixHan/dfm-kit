@@ -1,24 +1,32 @@
 /**
- * snap.mjs — Instant 1-to-4 Frame Inspector (`dfm snap <htmlFile> <t1,t2,...> [outPath]`)
- * Replaces slow ad-hoc debug scripts when checking a single shot after edits.
+ * snap.mjs — Instant 1-to-4 Frame Inspector (`dfm snap <htmlFileOrRemotionDir> <t1,t2,...> [outPath]`)
+ * Supports both OpenFilm HTML scenes and Remotion projects via the adapter layer.
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { launchHeadlessBrowser, startStaticServer } from "./cdp-browser.mjs";
-import { measureShotDom, resolveSafeArea } from "./board.mjs";
+import { measureShotDom, parseEnergyValue, resolveSafeArea } from "./board.mjs";
+import { detectEngine, getAdapter } from "./adapters/index.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 
-export async function snapFrames(htmlFileArg, timesArg = "1.0", outArg = null) {
-  const absFile = path.resolve(htmlFileArg);
-  if (!fs.existsSync(absFile)) {
-    throw new Error(`Scene file not found: ${absFile}`);
+export async function snapFrames(
+  targetArg,
+  timesArg = "1.0",
+  outArg = null,
+  { engine = null, comp = null, serveUrl = null, rebuild = false } = {}
+) {
+  const absTarget = path.resolve(targetArg);
+  if (!fs.existsSync(absTarget)) {
+    throw new Error(`Target not found: ${absTarget}`);
   }
-  const projectDir = path.dirname(absFile);
-  const fileName = path.basename(absFile);
+
+  const isDir = fs.statSync(absTarget).isDirectory();
+  const projectDir = isDir ? absTarget : path.dirname(absTarget);
+  const resolvedEngine = detectEngine(absTarget, engine);
   const briefPath = path.join(projectDir, "brief.json");
   const brief = fs.existsSync(briefPath) ? JSON.parse(fs.readFileSync(briefPath, "utf8")) : null;
 
@@ -28,32 +36,57 @@ export async function snapFrames(htmlFileArg, timesArg = "1.0", outArg = null) {
     .filter((n) => Number.isFinite(n) && n >= 0);
   if (!times.length) times.push(1.0);
 
-  const serveRoot = projectDir.startsWith(REPO_ROOT) ? REPO_ROOT : projectDir;
-  const relPath = path.relative(serveRoot, absFile).replaceAll("\\", "/");
-  const server = await startStaticServer(serveRoot);
   const browser = await launchHeadlessBrowser();
+  let server = null;
+  let session = null;
 
   try {
     let width = brief?.format?.width || 1920;
     let height = brief?.format?.height || 1080;
+    let hasFilm = false;
+    let labelName = isDir ? path.basename(absTarget) : path.basename(absTarget);
 
-    await browser.setViewport(width, height);
-    await browser.navigate(`${server.baseUrl}/${relPath}`);
-    const info = await browser.evalJS(`(async () => {
-      if (window.film && window.film.ready) await window.film.ready;
-      if (document.fonts && document.fonts.ready) await document.fonts.ready;
-      return {
-        hasFilm: Boolean(window.film && typeof window.film.frame === 'function'),
-        width: window.film?.width || null,
-        height: window.film?.height || null,
-        duration: window.film?.duration || null
-      };
-    })()`);
-
-    if (!brief?.format && info.width && info.height && (info.width !== width || info.height !== height)) {
-      width = info.width;
-      height = info.height;
+    if (resolvedEngine === "remotion") {
+      const adapter = getAdapter("remotion");
+      session = await adapter.openSession({
+        absProject: projectDir,
+        brief,
+        browser,
+        parseEnergyValue,
+        comp,
+        serveUrl,
+        rebuild
+      });
+      width = session.width;
+      height = session.height;
+      hasFilm = true;
+      labelName = `${session.compositionId} (Remotion)`;
+    } else {
+      const htmlPath = isDir ? path.join(absTarget, brief?.shots?.[0]?.file || "scene.html") : absTarget;
+      if (!fs.existsSync(htmlPath)) {
+        throw new Error(`Scene file not found: ${htmlPath}`);
+      }
+      labelName = path.basename(htmlPath);
+      const serveRoot = projectDir.startsWith(REPO_ROOT) ? REPO_ROOT : projectDir;
+      const relPath = path.relative(serveRoot, htmlPath).replaceAll("\\", "/");
+      server = await startStaticServer(serveRoot);
       await browser.setViewport(width, height);
+      await browser.navigate(`${server.baseUrl}/${relPath}`);
+      const info = await browser.evalJS(`(async () => {
+        if (window.film && window.film.ready) await window.film.ready;
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        return {
+          hasFilm: Boolean(window.film && typeof window.film.frame === 'function'),
+          width: window.film?.width || null,
+          height: window.film?.height || null
+        };
+      })()`);
+      hasFilm = info.hasFilm;
+      if (!brief?.format && info.width && info.height && (info.width !== width || info.height !== height)) {
+        width = info.width;
+        height = info.height;
+        await browser.setViewport(width, height);
+      }
     }
 
     const safeArea = resolveSafeArea(width, height, brief);
@@ -63,7 +96,9 @@ export async function snapFrames(htmlFileArg, timesArg = "1.0", outArg = null) {
 
     const shots = [];
     for (const t of times) {
-      if (info.hasFilm) {
+      if (session) {
+        await session.seek(null, t);
+      } else if (hasFilm) {
         await browser.evalJS(`window.film.frame(${t}); void document.body.offsetHeight;`);
       }
       const dom = await measureShotDom(browser, width, height, safeArea);
@@ -100,7 +135,7 @@ export async function snapFrames(htmlFileArg, timesArg = "1.0", outArg = null) {
         .c{position:relative;border:1px solid #2f333d;background:#000;overflow:hidden}
         .c img{width:100%;height:100%;object-fit:cover;display:block}
         .c span{position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,0.78);color:#f5f3ee;padding:2px 6px;font-size:11px}
-      </style></head><body><div class="h">DFM SNAP · ${fileName} (${width}×${height})</div><div class="row">${cells}</div></body></html>`;
+      </style></head><body><div class="h">DFM SNAP · ${labelName} (${width}×${height})</div><div class="row">${cells}</div></body></html>`;
       await browser.setViewport(canvasW, canvasH);
       await browser.setHtml(html);
       const stripPng = await browser.screenshotPng({ width: canvasW, height: canvasH });
@@ -111,7 +146,8 @@ export async function snapFrames(htmlFileArg, timesArg = "1.0", outArg = null) {
       outPath,
       width,
       height,
-      hasFilm: info.hasFilm,
+      engine: resolvedEngine,
+      hasFilm,
       frames: shots.map((s) => ({
         t: s.t,
         clips: s.dom.viewportClips.length,
@@ -120,6 +156,7 @@ export async function snapFrames(htmlFileArg, timesArg = "1.0", outArg = null) {
     };
   } finally {
     await browser.close();
-    await server.close();
+    if (session) await session.close();
+    if (server) await server.close();
   }
 }

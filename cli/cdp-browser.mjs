@@ -30,9 +30,15 @@ const MIME = {
   ".woff2": "font/woff2",
   ".woff": "font/woff",
   ".ttf": "font/ttf",
+  ".otf": "font/otf",
+  ".wasm": "application/wasm",
   ".vtt": "text/vtt; charset=utf-8",
   ".mp3": "audio/mpeg",
-  ".wav": "audio/wav"
+  ".wav": "audio/wav",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".gif": "image/gif",
+  ".ico": "image/x-icon"
 };
 
 export function findBrowserExecutable() {
@@ -85,17 +91,22 @@ export function startStaticServer(rootDir) {
           res.end("Forbidden");
           return;
         }
-        if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
+        let targetPath = fullPath;
+        if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
+          const idx = path.join(targetPath, "index.html");
+          if (fs.existsSync(idx)) targetPath = idx;
+        }
+        if (!fs.existsSync(targetPath) || fs.statSync(targetPath).isDirectory()) {
           res.writeHead(404);
           res.end("Not Found");
           return;
         }
-        const ext = path.extname(fullPath).toLowerCase();
+        const ext = path.extname(targetPath).toLowerCase();
         res.writeHead(200, {
           "Content-Type": MIME[ext] || "application/octet-stream",
           "Cache-Control": "no-store"
         });
-        fs.createReadStream(fullPath).pipe(res);
+        fs.createReadStream(targetPath).pipe(res);
       } catch (err) {
         res.writeHead(500);
         res.end(String(err));

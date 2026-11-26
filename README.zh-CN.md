@@ -63,8 +63,8 @@ flowchart LR
 | 目标引擎 | 当前状态 | 说明 |
 | :--- | :--- | :--- |
 | **[OpenFilm](https://openfilm.dev)** | **已内置支持** | 确定性 `window.film.frame(t)`、`dfm to-openfilm`、Studio Skill 一键安装与原生 CC0 音效流 |
+| **[Remotion](https://remotion.dev)** | **已内置支持** | 自动识别 `package.json`、缓存单次打包 CDP 审片板与 `dfm snap`、`runtime/dfm-remotion.js` React 样式桥接、TSX/CSS/音频质检与 `dfm install-skill --engine remotion` |
 | **Hyperframes** | **规划中** | 渲染适配器与确定性时间轴桥接 |
-| **Remotion** | **规划中** | React 合成帧检查器与 Q1–Q16 视觉质检适配器 |
 
 ---
 
@@ -92,10 +92,10 @@ node cli/dfm.mjs install-skill
 
 | 命令 | 作用 |
 | :--- | :--- |
-| `node cli/dfm.mjs check <目录> [--full]` | 默认生成极速单板 `review-board.png` + 0.25s 全轴扫帧 + Q1–Q16 质检（`--full` 输出 5 张高清分板） |
-| `node cli/dfm.mjs snap <html文件> <t1,t2,...>` | 1–2 秒指定时间点快查（输出 `dfm-out/snap.png` 与安全区数据） |
+| `node cli/dfm.mjs check <目录> [--full] [--comp <Id>] [--serve-url <url>]` | 默认生成清晰分页审片板 `review-board*.png`（≤6 镜/页）+ 0.25s 全轴扫帧 + Q1–Q16 质检（自动识别 OpenFilm 与 Remotion；`--full` 输出 5 张高清分板） |
+| `node cli/dfm.mjs snap <html文件或Remotion目录> <t1,t2,...> [--comp <Id>]` | 1–3 秒指定时间点快查（输出 `dfm-out/snap.png` 与安全区数据），同时支持 OpenFilm 与 Remotion |
 | `node cli/dfm.mjs palette <图片> [输出目录]` | 从剧照/色卡自动提取 OKLCH 色彩脚本、色卡图与 CSS 变量 |
-| `node cli/dfm.mjs install-skill [技能目录]` | 一键安装 `dfm-kit` Skill 并绑定本地路径 |
+| `node cli/dfm.mjs install-skill [技能目录] [--engine openfilm\|remotion]` | 一键安装 OpenFilm 版（`dfm-kit`）或 Remotion 版（`dfm-kit-remotion`）Skill 并绑定本地路径与材质清单 |
 | `node cli/dfm.mjs to-openfilm <目录> [草稿名]` | 将外部开发项目打包同步进 OpenFilm Studio `Projects/` |
 | `node cli/dfm.mjs preview <目录>` | 导出 30fps H.264 MP4 预览视频（供无 Studio 的外部终端使用） |
 | `node cli/dfm.mjs audit <目录>` | 仅运行 Q1–Q16 质检报告 |

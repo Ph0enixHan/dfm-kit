@@ -1,5 +1,6 @@
 /**
- * audit.mjs (v0.8 — Style-Agnostic Design-for-Motion Q1-Q16 QA Auditor)
+ * audit.mjs (v0.9 — Multi-Engine Style-Agnostic Design-for-Motion Q1-Q16 QA Auditor)
+ * Supports both OpenFilm (HTML/window.film) and Remotion (React/TSX) projects.
  * Zero style lock-in: never bans glow, never forces 3D planes, never caps artistic density.
  * Strictly guards universal OpenFilm craft: determinism, GPU performance, grayscale value,
  * Color Script discipline, Pure Cinema Frame (no slide pagination/eyebrows), single-track
@@ -11,6 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnergyValue } from "./board.mjs";
+import { detectEngine } from "./adapters/index.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUBRIC_PATH = path.resolve(__dirname, "..", "spec", "rubric.json");
@@ -141,7 +143,174 @@ function scanShotSource(filePath) {
   return issues;
 }
 
-export function runAudit(projectDir) {
+function collectRemotionSources(absProject) {
+  const srcRoot = path.join(absProject, "src");
+  const files = [];
+  const exts = new Set([".tsx", ".jsx", ".ts", ".js", ".css"]);
+  const ignoreDirs = new Set(["node_modules", ".git", "dfm-out", "build", "dist", "out", "dfm"]);
+
+  function walk(dir, depth = 0) {
+    if (depth > 6 || !fs.existsSync(dir)) return;
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (ignoreDirs.has(ent.name)) continue;
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        walk(full, depth + 1);
+      } else if (exts.has(path.extname(ent.name).toLowerCase())) {
+        files.push(full);
+      }
+    }
+  }
+  walk(srcRoot);
+  return files;
+}
+
+function scanRemotionProject(absProject, brief) {
+  const files = collectRemotionSources(absProject);
+  const issues = [];
+  let combinedCorpus = "";
+  let hasAudioTag = false;
+  let audioCount = 0;
+  const audioIssues = [];
+
+  for (const full of files) {
+    const rel = path.relative(absProject, full).replaceAll("\\", "/");
+    const src = fs.readFileSync(full, "utf8");
+    combinedCorpus += "\n" + src;
+    const isCss = full.endsWith(".css");
+
+    if (!isCss) {
+      if (/\brequestAnimationFrame\s*\(/.test(src)) {
+        issues.push({ rule: "Q11", level: "Blocker", msg: `${rel}: Do not use requestAnimationFrame — drive all motion from useCurrentFrame()` });
+      }
+      if (/\bMath\.random\s*\(/.test(src)) {
+        issues.push({ rule: "Q11", level: "Blocker", msg: `${rel}: Do not use Math.random() — use deterministic random() from remotion or hash() from dfm-remotion` });
+      }
+      if (/\bsetInterval\s*\(|\bsetTimeout\s*\(/.test(src)) {
+        issues.push({ rule: "Q11", level: "Fix", msg: `${rel}: Avoid setTimeout/setInterval in Remotion compositions — use frame math` });
+      }
+      if (/\b(?:transition|animation)\s*:\s*["'`][^"'`]+["'`]/i.test(src)) {
+        issues.push({ rule: "Q11", level: "Fix", msg: `${rel}: CSS transition/animation detected — CSS animations do not sync with Remotion frame rendering; drive motion from useCurrentFrame()` });
+      }
+      const twAnim = src.match(/className=["'`][^"'`]*\b(animate-(?:bounce|ping|pulse|spin)|transition(?:-(?:all|colors|opacity|transform))?)\b[^"'`]*["'`]/);
+      if (twAnim) {
+        issues.push({ rule: "Q11", level: "Fix", msg: `${rel}: Tailwind "${twAnim[1]}" class detected — Tailwind CSS transitions/animations break deterministic Remotion rendering; animate with useCurrentFrame()` });
+      }
+    } else {
+      if (/@keyframes\b|\btransition\s*:|\banimation\s*:/i.test(src)) {
+        issues.push({ rule: "Q11", level: "Fix", msg: `${rel}: CSS transition/animation/@keyframes detected — drive motion from useCurrentFrame() instead of CSS animations in Remotion` });
+      }
+    }
+
+    // Truth to Medium checks across TSX/CSS
+    if (/(?:repeating-)?conic-gradient\s*\(/i.test(src)) {
+      issues.push({ rule: "Q14", level: "Fix", msg: `${rel}: conic-gradient detected (commonly produces cheap faux-metal artifacts) — use clean matte graphics or real imagery` });
+    }
+    const hardExtrusionMatch = src.match(
+      /(?:box-shadow|boxShadow)\s*:\s*["'`]?[^;{}'"`]*?(?:^|[\s,])(-?\d{1,3})px\s+(-?\d{1,3})px\s+0(?:px)?(?:\s+0(?:px)?)?\s+(?:#|rgb|hsl|oklch|color-mix)/i
+    );
+    if (hardExtrusionMatch && (Math.abs(Number(hardExtrusionMatch[1])) >= 8 || Math.abs(Number(hardExtrusionMatch[2])) >= 8)) {
+      issues.push({ rule: "Q14", level: "Fix", msg: `${rel}: Hard zero-blur offset box-shadow (${hardExtrusionMatch[1]}px ${hardExtrusionMatch[2]}px 0) — rely on real 3D camera parallax and clean matte planes` });
+    }
+    if (/linear-gradient\s*\([^)]*#ffffff(?:[5-9a-f]{2}|[5-9a-f])\b[^)]*transparent/i.test(src)) {
+      issues.push({ rule: "Q14", level: "Fix", msg: `${rel}: Glossy diagonal white linear-gradient highlight detected — use clean matte OKLCH surfaces or real tactile textures` });
+    }
+
+    // Remotion <Audio> / <Html5Audio> inspection
+    for (const m of src.matchAll(/<(?:Audio|Html5Audio)\b([\s\S]*?)\/?>/g)) {
+      hasAudioTag = true;
+      audioCount++;
+      const attrs = m[1];
+      const sfMatch = attrs.match(/staticFile\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/);
+      if (sfMatch) {
+        const assetRel = sfMatch[1].replace(/^\/+/, "");
+        const assetPath = path.join(absProject, "public", assetRel);
+        if (!fs.existsSync(assetPath)) {
+          audioIssues.push(`missing public audio file "public/${assetRel}" referenced in ${rel}`);
+        }
+      }
+      const prMatch = attrs.match(/playbackRate\s*=\s*\{\s*([0-9.]+)\s*\}/);
+      if (prMatch) {
+        const pr = Number(prMatch[1]);
+        if (Number.isFinite(pr) && (pr < 0.9 || pr > 1.15)) {
+          audioIssues.push(
+            `${rel}: <Audio playbackRate={${pr}}> stretches narration/audio — lock durationInFrames to real audio length with playbackRate={1}`
+          );
+        }
+      }
+    }
+  }
+
+  // Project-level custom font check
+  const hasCustomFont = /@remotion\/google-fonts|loadFont\s*\(|fonts\.googleapis\.com|fonts\.gstatic\.com|@font-face|\.woff2?\b|\.ttf\b|\.otf\b/i.test(combinedCorpus);
+  const hasVisibleText = /fontFamily|font-family|<h[1-6]\b|<p\b|<text\b|fillText\s*\(/i.test(combinedCorpus);
+  if (files.length && !hasCustomFont && hasVisibleText) {
+    issues.push({
+      rule: "Q13",
+      level: "Fix",
+      msg: "No @remotion/google-fonts, Google Fonts, or @font-face loaded — cast an intentional typeface instead of bare system fallback fonts"
+    });
+  }
+
+  // Project-level Tailwind cliché hex check
+  const lower = combinedCorpus.toLowerCase();
+  const clicheHits = TAILWIND_CLICHE_HEXES.filter((hex) => lower.includes(hex));
+  if (clicheHits.length >= 2) {
+    issues.push({
+      rule: "Q8",
+      level: "Fix",
+      msg: `Multiple default software UI colors detected (${clicheHits.join(", ")}) — use an OKLCH palette or dfm palette extraction`
+    });
+  }
+
+  // Optional VTT double-subtitle check when brief.audio.captions points to a .vtt
+  if (brief?.audio?.captions) {
+    const vttPath = path.resolve(absProject, brief.audio.captions);
+    if (fs.existsSync(vttPath)) {
+      const vttRaw = fs.readFileSync(vttPath, "utf8");
+      const norm = (s) =>
+        String(s || "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/[’‘'"]/g, "'")
+          .replace(/[^a-z0-9\u4e00-\u9fff]+/gi, " ")
+          .trim()
+          .toLowerCase();
+      const vttPlain = norm(
+        vttRaw
+          .split(/\r?\n/)
+          .filter((l) => l.trim() && !/^(WEBVTT|NOTE|REGION|STYLE|::cue|c\d+$|\d{2}:\d{2})/.test(l.trim()))
+          .join(" ")
+      );
+      const vttCompact = vttPlain.replace(/\s+/g, "");
+      if (vttCompact.length > 16) {
+        const jsLits = [...combinedCorpus.matchAll(/['"`]([^'"`\n]{8,120})['"`]/g)].map((m) => m[1].trim());
+        const jsxText = [...combinedCorpus.matchAll(/>([^<>{}\n]{8,120})</g)].map((m) => m[1].trim());
+        const dupes = [];
+        for (const lit of new Set([...jsLits, ...jsxText])) {
+          if (/^https?:|rgba?\(|px\s|sans-serif|monospace|staticFile/i.test(lit)) continue;
+          const nl = norm(lit);
+          const cjkCount = (nl.match(/[\u4e00-\u9fff]/g) || []).length;
+          const words = nl.split(" ").filter(Boolean);
+          const isSentenceLike = cjkCount >= 8 || words.length >= 4;
+          if (isSentenceLike && (vttPlain.includes(nl) || (cjkCount >= 8 && vttCompact.includes(nl.replace(/\s+/g, ""))))) {
+            dupes.push(lit);
+          }
+        }
+        if (dupes.length >= 2) {
+          issues.push({
+            rule: "Q13",
+            level: "Fix",
+            msg: `Captions (${brief.audio.captions}) are configured, but ${dupes.length} verbatim spoken sentence(s) (e.g. "${dupes[0]}") are also hard-coded in src/ — avoid double subtitles`
+          });
+        }
+      }
+    }
+  }
+
+  return { issues, hasAudioTag, audioCount, audioIssues };
+}
+
+export function runAudit(projectDir, { engine = null } = {}) {
   const absProject = path.resolve(projectDir);
   const rubric = JSON.parse(fs.readFileSync(RUBRIC_PATH, "utf8"));
   const briefPath = path.join(absProject, "brief.json");
@@ -149,90 +318,102 @@ export function runAudit(projectDir) {
 
   const brief = fs.existsSync(briefPath) ? JSON.parse(fs.readFileSync(briefPath, "utf8")) : null;
   const board = fs.existsSync(boardReportPath) ? JSON.parse(fs.readFileSync(boardReportPath, "utf8")) : null;
-
-  const uniqueShotFiles = [
-    ...new Set(
-      brief?.shots?.length
-        ? brief.shots.map((s) => s.file)
-        : fs.readdirSync(absProject).filter((f) => /^(shot|scene).*\.(html|htm)$/i.test(f)).sort()
-    )
-  ];
+  const resolvedEngine = engine || board?.engine || detectEngine(absProject);
 
   const codeIssuesByRule = new Map();
-  for (const f of uniqueShotFiles) {
-    const full = path.join(absProject, f);
-    if (!fs.existsSync(full)) continue;
-    for (const iss of scanShotSource(full)) {
-      if (!codeIssuesByRule.has(iss.rule)) codeIssuesByRule.set(iss.rule, []);
-      codeIssuesByRule.get(iss.rule).push(`${f}: ${iss.msg}`);
-    }
-  }
+  let remotionScan = null;
 
-  // Detect double subtitles when film.html already mounts a native <track ...vtt>
-  const filmHtmlPath = path.join(absProject, "film.html");
-  if (fs.existsSync(filmHtmlPath)) {
-    const filmSrc = fs.readFileSync(filmHtmlPath, "utf8");
-    const trackMatch = filmSrc.match(/<track\b[^>]*\bsrc=["']([^"']+\.vtt)["']/i);
-    if (trackMatch) {
-      const vttPath = path.resolve(absProject, trackMatch[1]);
-      if (fs.existsSync(vttPath)) {
-        const vttRaw = fs.readFileSync(vttPath, "utf8");
-        const norm = (s) =>
-          String(s || "")
-            .replace(/<[^>]+>/g, " ")
-            .replace(/[’‘'"]/g, "'")
-            .replace(/[^a-z0-9\u4e00-\u9fff]+/gi, " ")
-            .trim()
-            .toLowerCase();
-        const vttPlain = norm(
-          vttRaw
-            .split(/\r?\n/)
-            .filter(
-              (l) =>
-                l.trim() &&
-                !/^(WEBVTT|NOTE|REGION|STYLE|::cue|id:|width:|lines:|regionanchor:|viewportanchor:|c\d+$|\d{2}:\d{2})/.test(
-                  l.trim()
-                )
-            )
-            .join(" ")
-        );
-        const vttCompact = vttPlain.replace(/\s+/g, "");
-        if (vttCompact.length > 16) {
-          for (const f of uniqueShotFiles) {
-            const full = path.join(absProject, f);
-            if (!fs.existsSync(full)) continue;
-            const shotSrc = fs.readFileSync(full, "utf8").replace(/<style[\s\S]*?<\/style>/gi, "");
-            const jsLiterals = [...shotSrc.matchAll(/['"`]([^'"`\n]{8,120})['"`]/g)].map((m) => m[1].trim());
-            const htmlTextNodes = [
-              ...shotSrc
-                .replace(/<script[\s\S]*?<\/script>/gi, "")
-                .matchAll(/>([^<>{}\n]{8,120})</g)
-            ].map((m) => m[1].trim());
-            const literals = [...new Set([...jsLiterals, ...htmlTextNodes])];
-            const dupes = [];
-            for (const lit of literals) {
-              if (/^https?:|rgba?\(|px\s|sans-serif|monospace|assets\/|captions\//i.test(lit)) continue;
-              const nl = norm(lit);
-              const cjkCount = (nl.match(/[\u4e00-\u9fff]/g) || []).length;
-              const words = nl.split(" ").filter(Boolean);
-              const isSentenceLike = cjkCount >= 8 || words.length >= 4;
-              if (isSentenceLike && (vttPlain.includes(nl) || (cjkCount >= 8 && vttCompact.includes(nl.replace(/\s+/g, ""))))) {
-                dupes.push(lit);
+  if (resolvedEngine === "remotion") {
+    remotionScan = scanRemotionProject(absProject, brief);
+    for (const iss of remotionScan.issues) {
+      if (!codeIssuesByRule.has(iss.rule)) codeIssuesByRule.set(iss.rule, []);
+      codeIssuesByRule.get(iss.rule).push(iss.msg);
+    }
+  } else {
+    const uniqueShotFiles = [
+      ...new Set(
+        brief?.shots?.length
+          ? brief.shots.map((s) => s.file)
+          : fs.readdirSync(absProject).filter((f) => /^(shot|scene).*\.(html|htm)$/i.test(f)).sort()
+      )
+    ];
+
+    for (const f of uniqueShotFiles) {
+      const full = path.join(absProject, f);
+      if (!fs.existsSync(full)) continue;
+      for (const iss of scanShotSource(full)) {
+        if (!codeIssuesByRule.has(iss.rule)) codeIssuesByRule.set(iss.rule, []);
+        codeIssuesByRule.get(iss.rule).push(`${f}: ${iss.msg}`);
+      }
+    }
+
+    // Detect double subtitles when film.html already mounts a native <track ...vtt>
+    const filmHtmlPathCheck = path.join(absProject, "film.html");
+    if (fs.existsSync(filmHtmlPathCheck)) {
+      const filmSrc = fs.readFileSync(filmHtmlPathCheck, "utf8");
+      const trackMatch = filmSrc.match(/<track\b[^>]*\bsrc=["']([^"']+\.vtt)["']/i);
+      if (trackMatch) {
+        const vttPath = path.resolve(absProject, trackMatch[1]);
+        if (fs.existsSync(vttPath)) {
+          const vttRaw = fs.readFileSync(vttPath, "utf8");
+          const norm = (s) =>
+            String(s || "")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/[’‘'"]/g, "'")
+              .replace(/[^a-z0-9\u4e00-\u9fff]+/gi, " ")
+              .trim()
+              .toLowerCase();
+          const vttPlain = norm(
+            vttRaw
+              .split(/\r?\n/)
+              .filter(
+                (l) =>
+                  l.trim() &&
+                  !/^(WEBVTT|NOTE|REGION|STYLE|::cue|id:|width:|lines:|regionanchor:|viewportanchor:|c\d+$|\d{2}:\d{2})/.test(
+                    l.trim()
+                  )
+              )
+              .join(" ")
+          );
+          const vttCompact = vttPlain.replace(/\s+/g, "");
+          if (vttCompact.length > 16) {
+            for (const f of uniqueShotFiles) {
+              const full = path.join(absProject, f);
+              if (!fs.existsSync(full)) continue;
+              const shotSrc = fs.readFileSync(full, "utf8").replace(/<style[\s\S]*?<\/style>/gi, "");
+              const jsLiterals = [...shotSrc.matchAll(/['"`]([^'"`\n]{8,120})['"`]/g)].map((m) => m[1].trim());
+              const htmlTextNodes = [
+                ...shotSrc
+                  .replace(/<script[\s\S]*?<\/script>/gi, "")
+                  .matchAll(/>([^<>{}\n]{8,120})</g)
+              ].map((m) => m[1].trim());
+              const literals = [...new Set([...jsLiterals, ...htmlTextNodes])];
+              const dupes = [];
+              for (const lit of literals) {
+                if (/^https?:|rgba?\(|px\s|sans-serif|monospace|assets\/|captions\//i.test(lit)) continue;
+                const nl = norm(lit);
+                const cjkCount = (nl.match(/[\u4e00-\u9fff]/g) || []).length;
+                const words = nl.split(" ").filter(Boolean);
+                const isSentenceLike = cjkCount >= 8 || words.length >= 4;
+                if (isSentenceLike && (vttPlain.includes(nl) || (cjkCount >= 8 && vttCompact.includes(nl.replace(/\s+/g, ""))))) {
+                  dupes.push(lit);
+                }
               }
-            }
-            if (dupes.length >= 2) {
-              if (!codeIssuesByRule.has("Q13")) codeIssuesByRule.set("Q13", []);
-              codeIssuesByRule
-                .get("Q13")
-                .push(
-                  `${f}: film.html already mounts native captions (${trackMatch[1]}), but ${dupes.length} verbatim spoken sentence(s) (e.g. "${dupes[0]}") are also drawn inside the scene — remove in-scene subtitle lines to avoid double subtitles`
-                );
+              if (dupes.length >= 2) {
+                if (!codeIssuesByRule.has("Q13")) codeIssuesByRule.set("Q13", []);
+                codeIssuesByRule
+                  .get("Q13")
+                  .push(
+                    `${f}: film.html already mounts native captions (${trackMatch[1]}), but ${dupes.length} verbatim spoken sentence(s) (e.g. "${dupes[0]}") are also drawn inside the scene — remove in-scene subtitle lines to avoid double subtitles`
+                  );
+              }
             }
           }
         }
       }
     }
   }
+  const filmHtmlPath = path.join(absProject, "film.html");
 
   const results = [];
 
@@ -421,6 +602,45 @@ export function runAudit(projectDir) {
           const noFilm = board.shots.filter((s) => !s.hasFilm);
           const blankEntry = board.shots.filter((s) => s.entryPixels && s.entryPixels.valueDynamicRange < 12);
           const rtErrs = board.runtimeErrors || [];
+
+          if (resolvedEngine === "remotion") {
+            const missingAudio = !remotionScan?.hasAudioTag && brief?.silent !== true;
+            const audioIssues = remotionScan?.audioIssues || [];
+            if (noFilm.length) {
+              status = "Blocker";
+              notes.push(...noFilm.map((s) => `${s.id} Remotion composition failed to render`));
+            }
+            if (rtErrs.length) {
+              status = "Blocker";
+              notes.push(...rtErrs.map((e) => `${e.file} threw at t=${e.t}s: ${e.message}`));
+            }
+            if (blankEntry.length) {
+              if (status !== "Blocker") status = "Fix";
+              notes.push(
+                ...blankEntry.map(
+                  (s) =>
+                    `${s.id} opening frame at t=${s.entryAt}s is a near-solid blank (ΔVal ${s.entryPixels.valueDynamicRange}, meanLuma ${s.entryPixels.meanLuma}) — give every beat a visible subject from its first frame`
+                )
+              );
+            }
+            if (missingAudio) {
+              if (status !== "Blocker") status = "Fix";
+              notes.push(
+                "No <Audio> / <Html5Audio> found in src/ — mount a continuous sound bed & synced SFX (or set brief.silent=true if intentionally silent)"
+              );
+            }
+            if (audioIssues.length) {
+              if (status !== "Blocker") status = "Fix";
+              notes.push(...audioIssues);
+            }
+            if (!noFilm.length && !rtErrs.length && !blankEntry.length && !missingAudio && !audioIssues.length) {
+              notes.push(
+                `Remotion composition (${board.compositionId || "default"}) verified, full-timeline 0.25s sweep 0 errors, non-blank opening frames${remotionScan?.audioCount ? `, ${remotionScan.audioCount} <Audio> track(s) verified` : ""}`
+              );
+            }
+            break;
+          }
+
           const hasFilmHtml = fs.existsSync(filmHtmlPath);
           const filmHtmlContent = hasFilmHtml ? fs.readFileSync(filmHtmlPath, "utf8") : "";
           const audioTags = [...filmHtmlContent.matchAll(/<audio\b([^>]*)>/gi)];
@@ -516,7 +736,7 @@ export function runAudit(projectDir) {
   const outDir = path.join(absProject, "dfm-out");
   fs.mkdirSync(outDir, { recursive: true });
   const mdLines = [
-    `# Design for Motion QA Report (v0.8 Style-Agnostic) — ${brief?.title || path.basename(absProject)}`,
+    `# Design for Motion QA Report (v0.9 · ${resolvedEngine}) — ${brief?.title || path.basename(absProject)}`,
     "",
     `- **Summary**: PASS: ${summary.pass} | REVIEW: ${summary.review} | FIX: ${summary.fix} | BLOCKER: ${summary.blocker}`,
     `- **Checked At**: ${new Date().toISOString()}`,

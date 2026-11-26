@@ -16,12 +16,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { launchHeadlessBrowser, startStaticServer } from "./cdp-browser.mjs";
+import { launchHeadlessBrowser } from "./cdp-browser.mjs";
+import { detectEngine, getAdapter } from "./adapters/index.mjs";
 import { rgbToHex, rgbToOklch } from "./color-math.mjs";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(__dirname, "..");
 
 export const MAX_BEATS_PER_BOARD = 6;
 
@@ -637,7 +634,7 @@ function buildUnifiedReviewBoardHtml(meta, pageShots, allShots, pageInfo) {
           <h1>${escapeHtml(meta.title)}</h1>
         </div>
         <div class="hdr-meta">
-          <div>${meta.width}×${meta.height} · ${allShots.length} BEATS · SAFE: ${escapeHtml((meta.safePreset || "clean").toUpperCase())}${pageInfo && pageInfo.totalPages > 1 ? ` · PAGE ${pageInfo.page}/${pageInfo.totalPages} (BEATS ${pageInfo.startIdx}-${pageInfo.endIdx} OF ${allShots.length})` : ""}</div>
+          <div>${meta.width}×${meta.height} · ${allShots.length} BEATS · ${escapeHtml((meta.engine || "openfilm").toUpperCase())}${meta.compositionId ? ` (${escapeHtml(meta.compositionId)})` : ""} · SAFE: ${escapeHtml((meta.safePreset || "clean").toUpperCase())}${pageInfo && pageInfo.totalPages > 1 ? ` · PAGE ${pageInfo.page}/${pageInfo.totalPages} (BEATS ${pageInfo.startIdx}-${pageInfo.endIdx} OF ${allShots.length})` : ""}</div>
           <div>TENSION: ${escapeHtml(meta.tension)}</div>
         </div>
       </div>
@@ -976,16 +973,35 @@ function buildMotionStripHtml(meta, shotResults) {
   return { html, width: canvasW, height: canvasH };
 }
 
-export async function generateBoards(projectDir, { full = false } = {}) {
-  const { absProject, brief, shots, width, height } = discoverProject(projectDir);
-  const safeArea = resolveSafeArea(width, height, brief);
+export async function generateBoards(
+  projectDir,
+  { full = false, engine = null, comp = null, serveUrl = null, rebuild = false } = {}
+) {
+  const absProject = path.resolve(projectDir);
+  if (!fs.existsSync(absProject)) {
+    throw new Error(`Project directory not found: ${absProject}`);
+  }
+  const briefPath = path.join(absProject, "brief.json");
+  const brief = fs.existsSync(briefPath) ? JSON.parse(fs.readFileSync(briefPath, "utf8")) : null;
+
+  const resolvedEngine = detectEngine(absProject, engine);
+  const adapter = getAdapter(resolvedEngine);
   const outDir = path.join(absProject, "dfm-out");
   fs.mkdirSync(outDir, { recursive: true });
 
-  const serveRoot = absProject.startsWith(REPO_ROOT) ? REPO_ROOT : absProject;
-  const relProjectFromRoot = path.relative(serveRoot, absProject).replaceAll("\\", "/");
-  const server = await startStaticServer(serveRoot);
   const browser = await launchHeadlessBrowser();
+  const session = await adapter.openSession({
+    absProject,
+    brief,
+    browser,
+    parseEnergyValue,
+    comp,
+    serveUrl,
+    rebuild
+  });
+
+  const { width, height, shots } = session;
+  const safeArea = resolveSafeArea(width, height, brief);
 
   const imgMime = full ? "image/png" : "image/jpeg";
   const captureScale = full ? 1 : 0.5;
@@ -999,69 +1015,9 @@ export async function generateBoards(projectDir, { full = false } = {}) {
 
   try {
     const shotResults = [];
-    let loadedUrl = null;
-    let cachedFilmInfo = null;
-    const sweptUrls = new Set();
-    const runtimeErrors = [];
 
     for (const shot of shots) {
-      const shotPath = path.join(absProject, shot.file);
-      if (!fs.existsSync(shotPath)) {
-        throw new Error(`Scene file not found: ${shotPath}`);
-      }
-
-      const urlPath = relProjectFromRoot ? `${relProjectFromRoot}/${shot.file}` : shot.file;
-      const url = `${server.baseUrl}/${urlPath}`;
-
-      if (url !== loadedUrl) {
-        await browser.setViewport(width, height);
-        await browser.navigate(url);
-        cachedFilmInfo = await browser.evalJS(`(async () => {
-          if (window.film && window.film.ready) await window.film.ready;
-          if (document.fonts && document.fonts.ready) await document.fonts.ready;
-          return {
-            hasFilm: Boolean(window.film && typeof window.film.frame === 'function'),
-            duration: window.film?.duration ?? null,
-            meta: window.film?.meta ?? null
-          };
-        })()`);
-        loadedUrl = url;
-
-        // Ultra-fast full-timeline JS exception sweep (every 0.25s, no screenshots, ~20ms total)
-        if (cachedFilmInfo.hasFilm && !sweptUrls.has(url)) {
-          sweptUrls.add(url);
-          const sweepDur = cachedFilmInfo.duration || shot.duration || 10;
-          const sweepErrs = await browser.evalJS(`(() => {
-            const errs = [];
-            const dur = ${Number(sweepDur)};
-            const step = 0.25;
-            for (let t = 0; t <= dur + 0.001; t += step) {
-              const tt = Math.min(dur, Number(t.toFixed(3)));
-              try { window.film.frame(tt); }
-              catch (e) {
-                errs.push({ t: tt, message: e && e.message ? e.message : String(e) });
-                if (errs.length >= 6) break;
-              }
-            }
-            return errs;
-          })()`);
-          for (const e of sweepErrs) {
-            runtimeErrors.push({ file: shot.file, t: e.t, message: e.message });
-          }
-        }
-      }
-
-      const filmInfo = cachedFilmInfo;
-      const totalDuration = filmInfo.duration ?? shot.duration;
-      const isContinuousBeat =
-        shot.start > 0 || brief?.shots?.filter((x) => x.file === shot.file).length > 1;
-      const beatStart = isContinuousBeat ? shot.start : 0;
-      const duration = isContinuousBeat ? shot.duration : totalDuration;
-      const heroAt =
-        shot.heroAt ??
-        (isContinuousBeat
-          ? Number((beatStart + duration * 0.52).toFixed(2))
-          : filmInfo.meta?.heroAt ?? Number((duration * 0.52).toFixed(2)));
+      const { hasFilm, beatStart, duration, heroAt } = await session.resolveShotTiming(shot);
 
       const motionFrames = [];
       let heroImg = null;
@@ -1069,9 +1025,7 @@ export async function generateBoards(projectDir, { full = false } = {}) {
 
       for (const f of motionFracs) {
         const tVal = Number((beatStart + duration * f).toFixed(2));
-        if (filmInfo.hasFilm) {
-          await browser.evalJS(`window.film.frame(${tVal}); void document.body.offsetHeight;`);
-        }
+        await session.seek(shot, tVal);
         const img = await captureFrame();
         motionFrames.push({ t: tVal, img });
         if (!heroImg && Math.abs(tVal - heroAt) <= 0.08) {
@@ -1081,9 +1035,7 @@ export async function generateBoards(projectDir, { full = false } = {}) {
       }
 
       if (!heroImg) {
-        if (filmInfo.hasFilm) {
-          await browser.evalJS(`window.film.frame(${heroAt}); void document.body.offsetHeight;`);
-        }
+        await session.seek(shot, heroAt);
         heroImg = await captureFrame();
         dom = await measureShotDom(browser, width, height, safeArea);
       }
@@ -1098,7 +1050,7 @@ export async function generateBoards(projectDir, { full = false } = {}) {
 
       if (full) {
         fs.writeFileSync(
-          path.join(outDir, `hero-${String(shot.index).padStart(2, "0")}-${shot.id}.png`),
+          path.join(outDir, `hero-${pad2(shot.index)}-${shot.id}.png`),
           heroImg
         );
       }
@@ -1109,7 +1061,7 @@ export async function generateBoards(projectDir, { full = false } = {}) {
         entryAt: motionFrames[0].t,
         heroAt,
         exitAt: motionFrames[motionFrames.length - 1].t,
-        hasFilm: filmInfo.hasFilm,
+        hasFilm,
         dom,
         pixels,
         entryPixels,
@@ -1121,7 +1073,10 @@ export async function generateBoards(projectDir, { full = false } = {}) {
     }
 
     const meta = {
-      title: brief?.title || path.basename(absProject),
+      title: brief?.title || session.compositionId || path.basename(absProject),
+      engine: session.engine,
+      compositionId: session.compositionId || null,
+      fps: session.fps || 30,
       width,
       height,
       safePreset: safeArea.preset,
@@ -1193,10 +1148,12 @@ export async function generateBoards(projectDir, { full = false } = {}) {
     const report = {
       generatedAt: new Date().toISOString(),
       mode: full ? "full" : "fast",
+      engine: session.engine,
+      compositionId: session.compositionId || null,
       projectDir: absProject,
       meta,
       outputs,
-      runtimeErrors,
+      runtimeErrors: session.runtimeErrors,
       layoutVariety,
       shots: shotResults.map(({ heroImg, motionFrames, imgMime: _m, ...rest }) => rest)
     };
@@ -1208,6 +1165,6 @@ export async function generateBoards(projectDir, { full = false } = {}) {
     return { report, outputs };
   } finally {
     await browser.close();
-    await server.close();
+    await session.close();
   }
 }
