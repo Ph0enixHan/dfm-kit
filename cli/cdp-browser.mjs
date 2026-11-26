@@ -266,6 +266,10 @@ export async function launchHeadlessBrowser() {
     );
   }
 
+  async function addInitScript(source) {
+    await send("Page.addScriptToEvaluateOnNewDocument", { source }, sessionId);
+  }
+
   async function navigate(url) {
     const loadPromise = onceEvent("Page.loadEventFired", sessionId, 20000);
     await send("Page.navigate", { url }, sessionId);
@@ -338,5 +342,5 @@ export async function launchHeadlessBrowser() {
     }
   }
 
-  return { setViewport, navigate, setHtml, evalJS, screenshotPng, screenshotJpeg, close };
+  return { setViewport, addInitScript, navigate, setHtml, evalJS, screenshotPng, screenshotJpeg, close };
 }

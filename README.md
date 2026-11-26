@@ -64,8 +64,8 @@ Assemble frame-synced SFX (`whoosh`, `impact`, `latch`) and restrained music tra
 | Target Engine | Status | Notes |
 | :--- | :--- | :--- |
 | **[OpenFilm](https://openfilm.dev)** | **Supported (Built-in)** | Deterministic `window.film.frame(t)`, `dfm to-openfilm`, Studio skill installer & native CC0 audio workflow |
-| **[Remotion](https://remotion.dev)** | **Supported (Built-in)** | Auto-detected via `package.json`, cached bundle-once CDP review boards & `dfm snap`, `runtime/dfm-remotion.js` React style bridge, TSX/CSS/audio QA guards & `dfm install-skill --engine remotion` |
-| **Hyperframes** | **Planned** | Renderer adapter & deterministic timeline bridge |
+| **[Remotion](https://remotion.dev)** | **Supported (Built-in)** | Auto-detected via `package.json`, cached bundle-once CDP review boards & `dfm snap`, `runtime/dfm-remotion.js` React camera/optical bridge, TSX/CSS/audio QA guards & `dfm install-skill --engine remotion` |
+| **[HyperFrames](https://hyperframes.dev)** | **Supported (Built-in)** | Auto-detected via `data-composition-id` / `.hyperframes`, standalone & `<template>` sub-composition CDP mounter, `runtime/dfm-hyperframes.js` timeline/GSAP camera bridge, contract & audio QA guards & `dfm install-skill --engine hyperframes` |
 
 ---
 
@@ -93,10 +93,10 @@ Invoke the `dfm-kit` skill and describe your video (or even give a single senten
 
 | Command | Description |
 | :--- | :--- |
-| `node cli/dfm.mjs check <dir> [--full] [--comp <Id>] [--serve-url <url>]` | Render sharp paginated `review-board*.png` (<=6 beats/page) + 0.25s full-timeline crash sweep + Q1–Q16 QA (auto-detects OpenFilm & Remotion; `--full` outputs 5 standalone HD boards) |
-| `node cli/dfm.mjs snap <htmlOrRemotionDir> <t1,t2,...> [--comp <Id>]` | 1–3s single/multi-frame inspector (`dfm-out/snap.png` + safe-zone clipping stats) for OpenFilm HTML or Remotion projects |
+| `node cli/dfm.mjs check <dir> [--full] [--engine openfilm\|remotion\|hyperframes] [--comp <Id>] [--serve-url <url>]` | Render sharp paginated `review-board*.png` (<=6 beats/page) + 0.25s full-timeline crash sweep + Q1–Q16 QA (auto-detects OpenFilm, Remotion & HyperFrames; `--full` outputs 5 standalone HD boards) |
+| `node cli/dfm.mjs snap <target> <t1,t2,...> [--comp <Id>]` | 1–3s single/multi-frame inspector (`dfm-out/snap.png` + safe-zone clipping stats) for OpenFilm HTML, Remotion dirs, or HyperFrames dirs/HTML |
 | `node cli/dfm.mjs palette <image> [outDir]` | Extract OKLCH Color Script, visual swatch card PNG, JSON & CSS theme variables |
-| `node cli/dfm.mjs install-skill [skillsDir] [--engine openfilm\|remotion]` | Install `dfm-kit` (OpenFilm) or `dfm-kit-remotion` (Remotion) skill with your local repo path & texture catalog |
+| `node cli/dfm.mjs install-skill [skillsDir] [--engine openfilm\|remotion\|hyperframes]` | Install `dfm-kit` (OpenFilm), `dfm-kit-remotion`, or `dfm-kit-hyperframes` skill with your local repo path & ground-matched texture catalog |
 | `node cli/dfm.mjs to-openfilm <dir> [name]` | Package an external project and sync into OpenFilm Studio `Projects/` |
 | `node cli/dfm.mjs preview <dir>` | Render a deterministic 30fps H.264 MP4 preview (for headless CLI outside Studio) |
 | `node cli/dfm.mjs audit <dir>` | Run Q1–Q16 QA audit without re-rendering boards |

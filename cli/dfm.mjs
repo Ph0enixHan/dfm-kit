@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * dfm.mjs (v0.9) — Fast Style-Agnostic Design-for-Motion Visual Microscope & Color Script CLI
- * Supports OpenFilm & Remotion (zero npm dependencies; Node 22+ built-in WebSocket/http + Chrome/Edge CDP).
+ * dfm.mjs (v1.0) — Fast Style-Agnostic Design-for-Motion Visual Microscope & Color Script CLI
+ * Supports OpenFilm, Remotion & HyperFrames (zero npm dependencies; Node 22+ WebSocket/http + Chrome/Edge CDP).
  */
 
 import fs from "node:fs";
@@ -49,21 +49,21 @@ const serveUrlOpt = opts["serve-url"] || null;
 
 function printHelp() {
   console.log(`
-dfm-kit v0.9 — Style-agnostic Design-for-Motion visual microscope & Color Script CLI (OpenFilm & Remotion)
+dfm-kit v1.0 — Style-agnostic Design-for-Motion visual microscope & Color Script CLI (OpenFilm, Remotion & HyperFrames)
 
 Usage:
-  node cli/dfm.mjs check         <projectDir> [--full] [--engine openfilm|remotion] [--comp <Id>] [--serve-url <url>] [--rebuild]
+  node cli/dfm.mjs check         <projectDir> [--full] [--engine openfilm|remotion|hyperframes] [--comp <Id>] [--serve-url <url>] [--rebuild]
                                  Render sharp review board(s) (<=6 beats/page) + 0.25s crash sweep + Q1-Q16 QA
-  node cli/dfm.mjs snap          <htmlOrRemotionDir> <t1,t2,...> [outPath] [--comp <Id>] [--serve-url <url>]
-                                 Instant 1-3s frame inspector (e.g. snap scene.html 1.2,3.5 or snap . 1.2,3.5)
+  node cli/dfm.mjs snap          <target> <t1,t2,...> [outPath] [--engine ...] [--comp <Id>] [--serve-url <url>]
+                                 Instant 1-3s frame inspector (OpenFilm scene.html, Remotion dir, or HyperFrames dir/index.html)
   node cli/dfm.mjs palette       <imagePath> [outDir]     Extract OKLCH Color Script, swatch PNG & theme CSS from any reference image
   node cli/dfm.mjs to-openfilm   <projectDir> [draftName] Package & sync directly into OpenFilm Studio Projects
-  node cli/dfm.mjs install-skill [skillsDir] [--engine openfilm|remotion]
-                                 Install dfm-kit (OpenFilm) or dfm-kit-remotion skill with local repo path & texture catalog
+  node cli/dfm.mjs install-skill [skillsDir] [--engine openfilm|remotion|hyperframes]
+                                 Install dfm-kit (OpenFilm), dfm-kit-remotion, or dfm-kit-hyperframes skill with local repo path & texture catalog
   node cli/dfm.mjs preview       <projectDir>             Render 30fps MP4 preview (OpenFilm headless CLI outside Studio)
   node cli/dfm.mjs board         <projectDir> [--full]    Render diagnostic board(s) only
   node cli/dfm.mjs audit         <projectDir>             Run Q1-Q16 QA audit only
-  node cli/dfm.mjs init          <targetDir> [--engine openfilm|remotion]
+  node cli/dfm.mjs init          <targetDir> [--engine openfilm|remotion|hyperframes]
                                  Scaffold a style-free brief.json starter
 `);
 }
@@ -76,7 +76,9 @@ function initStarter(targetDir, engine = "openfilm") {
     format: { width: 1080, height: 1920, aspect: "9:16", fps: 30, safePreset: "social-strict" },
     ...(engine === "remotion"
       ? { remotion: { entry: "src/index.ts", compositionId: "Main" } }
-      : {}),
+      : engine === "hyperframes"
+        ? { hyperframes: { entry: "index.html", compositionId: "main" } }
+        : {}),
     concept: {
       oneLineTreatment: "Describe the core visual metaphor in one sentence (let form grow from content).",
       emotion: "Primary emotional tone",
@@ -103,7 +105,7 @@ function initStarter(targetDir, engine = "openfilm") {
     shots: [
       {
         id: "beat1",
-        ...(engine === "remotion" ? {} : { file: "scene.html" }),
+        ...(engine === "remotion" ? {} : { file: engine === "hyperframes" ? "index.html" : "scene.html" }),
         role: "establishing",
         shotType: "wide",
         focalPoint: "Primary focal subject",
@@ -122,7 +124,7 @@ function initStarter(targetDir, engine = "openfilm") {
 }
 
 function printAuditTable(audit) {
-  console.log("\n================= Q1-Q16 Design for Motion QA Report (v0.9) =================");
+  console.log("\n================= Q1-Q16 Design for Motion QA Report (v1.0) =================");
   for (const r of audit.results) {
     const tag =
       r.status === "Pass"

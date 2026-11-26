@@ -46,10 +46,10 @@ export async function snapFrames(
     let hasFilm = false;
     let labelName = isDir ? path.basename(absTarget) : path.basename(absTarget);
 
-    if (resolvedEngine === "remotion") {
-      const adapter = getAdapter("remotion");
+    if (resolvedEngine === "remotion" || resolvedEngine === "hyperframes") {
+      const adapter = getAdapter(resolvedEngine);
       session = await adapter.openSession({
-        absProject: projectDir,
+        absProject: resolvedEngine === "hyperframes" ? absTarget : projectDir,
         brief,
         browser,
         parseEnergyValue,
@@ -60,7 +60,7 @@ export async function snapFrames(
       width = session.width;
       height = session.height;
       hasFilm = true;
-      labelName = `${session.compositionId} (Remotion)`;
+      labelName = `${session.compositionId || path.basename(absTarget)} (${resolvedEngine === "remotion" ? "Remotion" : "HyperFrames"})`;
     } else {
       const htmlPath = isDir ? path.join(absTarget, brief?.shots?.[0]?.file || "scene.html") : absTarget;
       if (!fs.existsSync(htmlPath)) {

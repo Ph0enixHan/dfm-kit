@@ -13,7 +13,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const SRC_SKILLS = {
   openfilm: { file: path.join(REPO_ROOT, "skill", "SKILL.md"), folder: "dfm-kit" },
-  remotion: { file: path.join(REPO_ROOT, "skill", "SKILL.remotion.md"), folder: "dfm-kit-remotion" }
+  remotion: { file: path.join(REPO_ROOT, "skill", "SKILL.remotion.md"), folder: "dfm-kit-remotion" },
+  hyperframes: { file: path.join(REPO_ROOT, "skill", "SKILL.hyperframes.md"), folder: "dfm-kit-hyperframes" }
 };
 
 export function getDefaultOpenFilmSkillsDir() {
@@ -32,10 +33,12 @@ export function buildLocalTextureCatalog(repoRoot, normalizedRoot, engine = "ope
   const lines = [];
   let packs = 0;
   let files = 0;
-  const isRemotion = engine === "remotion";
-  const destHint = isRemotion
-    ? "project `public/textures/` and mount via `<Img src={staticFile('textures/...')} style={textureOverlayStyle({ ground: 'dark' | 'light' })} data-bleed=\"true\" />`"
-    : "project `assets/`";
+  const destHint =
+    engine === "remotion"
+      ? "project `public/textures/` and mount via `<Img src={staticFile('textures/...')} style={textureOverlayStyle({ ground: 'dark' | 'light' })} data-bleed=\"true\" />`"
+      : engine === "hyperframes"
+        ? "project `assets/textures/` and reference via relative `assets/textures/...` (no leading `/`)"
+        : "project `assets/`";
 
   if (fs.existsSync(manifestPath)) {
     try {
@@ -89,7 +92,7 @@ export function installOpenFilmSkill(customSkillsDir, { engine = "openfilm" } = 
   const normEngine = String(engine || "openfilm").trim().toLowerCase();
   const targetSpec = SRC_SKILLS[normEngine];
   if (!targetSpec) {
-    throw new Error(`Unsupported skill engine "${engine}". Supported: openfilm, remotion`);
+    throw new Error(`Unsupported skill engine "${engine}". Supported: openfilm, remotion, hyperframes`);
   }
   if (!fs.existsSync(targetSpec.file)) {
     throw new Error(`Skill template not found: ${targetSpec.file}`);

@@ -7,7 +7,7 @@ description: >-
   and deterministic audio/caption auditing.
 ---
 
-# dfm-kit v0.9.2 (Remotion) — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v1.0 (Remotion) — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies added to your project).
 

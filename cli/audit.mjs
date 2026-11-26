@@ -1,6 +1,6 @@
 /**
- * audit.mjs (v0.9 — Multi-Engine Style-Agnostic Design-for-Motion Q1-Q16 QA Auditor)
- * Supports both OpenFilm (HTML/window.film) and Remotion (React/TSX) projects.
+ * audit.mjs (v1.0 — Multi-Engine Style-Agnostic Design-for-Motion Q1-Q16 QA Auditor)
+ * Supports OpenFilm (HTML/window.film), Remotion (React/TSX), and HyperFrames (HTML/GSAP/sub-compositions).
  * Zero style lock-in: never bans glow, never forces 3D planes, never caps artistic density.
  * Strictly guards universal OpenFilm craft: determinism, GPU performance, grayscale value,
  * Color Script discipline, Pure Cinema Frame (no slide pagination/eyebrows), single-track
@@ -380,6 +380,169 @@ function scanRemotionProject(absProject, brief) {
   return { issues, hasAudioTag, audioCount, audioIssues };
 }
 
+function collectHyperFramesSources(absProject, brief) {
+  const files = [];
+  const entryRel = brief?.hyperframes?.entry || "index.html";
+  const entryFull = path.resolve(absProject, entryRel);
+  if (fs.existsSync(entryFull)) files.push({ full: entryFull, isSub: false });
+
+  const compsDir = path.join(absProject, "compositions");
+  if (fs.existsSync(compsDir)) {
+    const walk = (dir, depth = 0) => {
+      if (depth > 4) return;
+      for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, ent.name);
+        if (ent.isDirectory()) walk(full, depth + 1);
+        else if (/\.html?$/i.test(ent.name)) files.push({ full, isSub: true });
+      }
+    };
+    walk(compsDir);
+  }
+  return files;
+}
+
+function scanHyperFramesProject(absProject, brief) {
+  const htmlEntries = collectHyperFramesSources(absProject, brief);
+  const issues = [];
+  let combinedCorpus = "";
+  let hasRootCompId = false;
+  let hasTimelineReg = false;
+  let hasAudioTag = false;
+  let audioCount = 0;
+  const audioIssues = [];
+
+  for (const { full, isSub } of htmlEntries) {
+    const rel = path.relative(absProject, full).replaceAll("\\", "/");
+    const src = fs.readFileSync(full, "utf8");
+    combinedCorpus += "\n" + src;
+
+    if (!isSub && /\bdata-composition-id\s*=/.test(src)) hasRootCompId = true;
+    if (/window\.__timelines\s*\[|createDfmTimeline\s*\(/.test(src)) hasTimelineReg = true;
+
+    // Sub-composition <template> transport rule: <style>/<script> in <head> is dropped by HyperFrames runtime!
+    if (isSub && /<template[\s>]/i.test(src)) {
+      const headMatch = src.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i);
+      if (headMatch && /<(?:style|script)\b/i.test(headMatch[1])) {
+        issues.push({
+          rule: "Q11",
+          level: "Blocker",
+          msg: `${rel}: <style> or <script> found inside <head> of a templated HyperFrames sub-composition — HyperFrames drops <head> when mounting; move all styles & scripts inside <template>`
+        });
+      }
+    }
+
+    // HyperFrames determinism & timeline contract
+    if (/\brequestAnimationFrame\s*\(/.test(src)) {
+      issues.push({ rule: "Q11", level: "Blocker", msg: `${rel}: Do not use requestAnimationFrame — drive all motion from a paused window.__timelines timeline` });
+    }
+    if (/\bMath\.random\s*\(/.test(src)) {
+      issues.push({ rule: "Q11", level: "Blocker", msg: `${rel}: Do not use unseeded Math.random() — use deterministic hash() from dfm-hyperframes.js` });
+    }
+    if (/\b(?:Date\.now|performance\.now)\s*\(/.test(src)) {
+      issues.push({ rule: "Q11", level: "Blocker", msg: `${rel}: Render-time clock (Date.now/performance.now) violates HyperFrames determinism — derive motion from timeline time only` });
+    }
+    if (/\bsetInterval\s*\(|\bsetTimeout\s*\(/.test(src)) {
+      issues.push({ rule: "Q11", level: "Fix", msg: `${rel}: Avoid setTimeout/setInterval in HyperFrames — schedule actions on the paused timeline` });
+    }
+    if (/\btl\.play\s*\(|\.__timelines\[[^\]]+\]\.play\s*\(/.test(src)) {
+      issues.push({ rule: "Q11", level: "Fix", msg: `${rel}: Do not call .play() on a HyperFrames timeline — keep timelines paused so HyperFrames seeks them frame-by-frame` });
+    }
+    if (/\.to\s*\(\s*["'`][^"'`]*\.clip[^"'`]*["'`]\s*,\s*\{[^}]*\b(?:display|visibility|autoAlpha)\b/i.test(src)) {
+      issues.push({ rule: "Q11", level: "Fix", msg: `${rel}: Never tween display/visibility/autoAlpha on a .clip element (gsap_animates_clip_element) — animate a child wrapper instead` });
+    }
+
+    for (const trap of detectAntiCinemaTraps(src, rel)) {
+      issues.push(trap);
+    }
+
+    // Truth to Medium & invisible texture checks
+    if (/(?:repeating-)?conic-gradient\s*\(/i.test(src)) {
+      issues.push({ rule: "Q14", level: "Fix", msg: `${rel}: conic-gradient detected — use clean matte graphics or real imagery instead of faux-metal CSS` });
+    }
+    const hardExtrusionMatch = src.match(
+      /box-shadow\s*:[^;{}]*?(?:^|[\s,])(-?\d{1,3})px\s+(-?\d{1,3})px\s+0(?:px)?(?:\s+0(?:px)?)?\s+(?:#|rgb|hsl|oklch|color-mix)/i
+    );
+    if (hardExtrusionMatch && (Math.abs(Number(hardExtrusionMatch[1])) >= 8 || Math.abs(Number(hardExtrusionMatch[2])) >= 8)) {
+      issues.push({ rule: "Q14", level: "Fix", msg: `${rel}: Hard zero-blur offset box-shadow (${hardExtrusionMatch[1]}px ${hardExtrusionMatch[2]}px 0) — rely on real 3D camera parallax and clean matte planes` });
+    }
+    if (/linear-gradient\s*\([^)]*#ffffff(?:[5-9a-f]{2}|[5-9a-f])\b[^)]*transparent/i.test(src)) {
+      issues.push({ rule: "Q14", level: "Fix", msg: `${rel}: Glossy diagonal white linear-gradient highlight detected — use clean matte OKLCH surfaces or real tactile textures` });
+    }
+    for (const tm of src.matchAll(
+      /(?:paper|grain|film|halftone|texture|cardboard|crumpled|overlay)[^;\n<>]{0,220}opacity\s*[:=]\s*["']?(0?\.\d+)["']?/gi
+    )) {
+      const op = Number(tm[1]);
+      if (Number.isFinite(op) && op > 0 && op < 0.08) {
+        issues.push({
+          rule: "Q14",
+          level: "Fix",
+          msg: `${rel}: Texture overlay opacity is nearly invisible (${op}) — match the texture pack to your ground polarity at visible tactility (0.16–0.45) or remove the dead layer`
+        });
+        break;
+      }
+    }
+
+    // HyperFrames <audio> & <video> contract checks
+    for (const m of src.matchAll(/<audio\b([^>]*)>/gi)) {
+      hasAudioTag = true;
+      audioCount++;
+      const attrs = m[1];
+      if (!/\bid\s*=\s*["'][^"']+["']/i.test(attrs)) {
+        audioIssues.push(`${rel}: <audio> is missing an id attribute — HyperFrames omits id-less <audio> from the mix (silent render)`);
+      }
+      if (/\bcrossorigin\b/i.test(attrs)) {
+        audioIssues.push(`${rel}: <audio> has crossorigin attribute (media_crossorigin_breaks_preview error in HyperFrames)`);
+      }
+      const rawSrc = (attrs.match(/\bsrc\s*=\s*["']([^"']+)["']/i) || [])[1] || "";
+      if (rawSrc.startsWith("/")) {
+        audioIssues.push(`${rel}: audio src="${rawSrc}" uses a leading "/" — HyperFrames requires relative "assets/..." paths`);
+      } else if (rawSrc && !/^https?:/.test(rawSrc)) {
+        const cleanFile = rawSrc.split("#")[0];
+        if (!fs.existsSync(path.resolve(absProject, cleanFile))) {
+          audioIssues.push(`${rel}: missing audio file "${cleanFile}"`);
+        }
+      }
+      const rateMatch = attrs.match(/\bdata-playback-rate\s*=\s*["']([0-9.]+)["']/i);
+      if (rateMatch) {
+        const r = Number(rateMatch[1]);
+        if (Number.isFinite(r) && (r < 0.9 || r > 1.15)) {
+          audioIssues.push(`${rel}: <audio data-playback-rate="${r}"> stretches narration/audio — align composition data-duration to real audio length`);
+        }
+      }
+    }
+    for (const m of src.matchAll(/<video\b([^>]*)>/gi)) {
+      const attrs = m[1];
+      if (/\bdata-has-audio\s*=\s*["']true["']/i.test(attrs)) {
+        hasAudioTag = true;
+        audioCount++;
+      }
+      if (/\bcrossorigin\b/i.test(attrs)) {
+        audioIssues.push(`${rel}: <video> has crossorigin attribute (media_crossorigin_breaks_preview error in HyperFrames)`);
+      }
+    }
+  }
+
+  if (htmlEntries.length && !hasTimelineReg) {
+    issues.push({
+      rule: "Q11",
+      level: "Fix",
+      msg: 'No window.__timelines["<id>"] (or createDfmTimeline) registration found — register a paused timeline matching data-composition-id'
+    });
+  }
+
+  const hasCustomFont = /fonts\.googleapis\.com|fonts\.gstatic\.com|@font-face|\.woff2?\b|\.ttf\b|\.otf\b/i.test(combinedCorpus);
+  const hasVisibleText = /font-family\s*:|<h[1-6]\b|<p\b|<text\b/i.test(combinedCorpus);
+  if (htmlEntries.length && !hasCustomFont && hasVisibleText) {
+    issues.push({
+      rule: "Q13",
+      level: "Fix",
+      msg: "No @font-face or Google Fonts loaded — cast an intentional typeface (local assets/fonts/ @font-face recommended for HyperFrames)"
+    });
+  }
+
+  return { issues, hasRootCompId, hasAudioTag, audioCount, audioIssues };
+}
+
 export function runAudit(projectDir, { engine = null } = {}) {
   const absProject = path.resolve(projectDir);
   const rubric = JSON.parse(fs.readFileSync(RUBRIC_PATH, "utf8"));
@@ -392,10 +555,17 @@ export function runAudit(projectDir, { engine = null } = {}) {
 
   const codeIssuesByRule = new Map();
   let remotionScan = null;
+  let hyperframesScan = null;
 
   if (resolvedEngine === "remotion") {
     remotionScan = scanRemotionProject(absProject, brief);
     for (const iss of remotionScan.issues) {
+      if (!codeIssuesByRule.has(iss.rule)) codeIssuesByRule.set(iss.rule, []);
+      codeIssuesByRule.get(iss.rule).push(iss.msg);
+    }
+  } else if (resolvedEngine === "hyperframes") {
+    hyperframesScan = scanHyperFramesProject(absProject, brief);
+    for (const iss of hyperframesScan.issues) {
       if (!codeIssuesByRule.has(iss.rule)) codeIssuesByRule.set(iss.rule, []);
       codeIssuesByRule.get(iss.rule).push(iss.msg);
     }
@@ -493,7 +663,13 @@ export function runAudit(projectDir, { engine = null } = {}) {
 
     const codeNotes = codeIssuesByRule.get(item.id) || [];
     if (codeNotes.length) {
-      status = codeNotes.some((n) => n.includes("requestAnimationFrame") || n.includes("Math.random"))
+      status = codeNotes.some(
+        (n) =>
+          n.includes("requestAnimationFrame") ||
+          n.includes("Math.random") ||
+          n.includes("Date.now") ||
+          n.includes("HyperFrames drops <head>")
+      )
         ? "Blocker"
         : "Fix";
       notes.push(...codeNotes);
@@ -760,6 +936,55 @@ export function runAudit(projectDir, { engine = null } = {}) {
             break;
           }
 
+          if (resolvedEngine === "hyperframes") {
+            const missingAudio = !hyperframesScan?.hasAudioTag && brief?.silent !== true;
+            const audioIssues = hyperframesScan?.audioIssues || [];
+            if (!hyperframesScan?.hasRootCompId) {
+              status = "Blocker";
+              notes.push('index.html missing root data-composition-id="..." attribute');
+            }
+            if (noFilm.length) {
+              status = "Blocker";
+              notes.push('HyperFrames composition did not register window.__timelines["<id>"] or timed clips');
+            }
+            if (rtErrs.length) {
+              status = "Blocker";
+              notes.push(...rtErrs.map((e) => `${e.file} threw at t=${e.t}s: ${e.message}`));
+            }
+            if (blankEntry.length) {
+              if (status !== "Blocker") status = "Fix";
+              notes.push(
+                ...blankEntry.map(
+                  (s) =>
+                    `${s.id} opening frame at t=${s.entryAt}s is a near-solid blank (ΔVal ${s.entryPixels.valueDynamicRange}, meanLuma ${s.entryPixels.meanLuma}) — give every beat a visible subject from its first frame`
+                )
+              );
+            }
+            if (missingAudio) {
+              if (status !== "Blocker") status = "Fix";
+              notes.push(
+                'No <audio id="..."> track found — mount a continuous sound bed & synced SFX (or set brief.silent=true if intentionally silent)'
+              );
+            }
+            if (audioIssues.length) {
+              if (status !== "Blocker") status = "Fix";
+              notes.push(...audioIssues);
+            }
+            if (
+              hyperframesScan?.hasRootCompId &&
+              !noFilm.length &&
+              !rtErrs.length &&
+              !blankEntry.length &&
+              !missingAudio &&
+              !audioIssues.length
+            ) {
+              notes.push(
+                `HyperFrames composition (${board.compositionId || "main"}) verified, full-timeline 0.25s sweep 0 errors, non-blank opening frames${hyperframesScan?.audioCount ? `, ${hyperframesScan.audioCount} <audio> track(s) verified` : ""}`
+              );
+            }
+            break;
+          }
+
           const hasFilmHtml = fs.existsSync(filmHtmlPath);
           const filmHtmlContent = hasFilmHtml ? fs.readFileSync(filmHtmlPath, "utf8") : "";
           const audioTags = [...filmHtmlContent.matchAll(/<audio\b([^>]*)>/gi)];
@@ -855,7 +1080,7 @@ export function runAudit(projectDir, { engine = null } = {}) {
   const outDir = path.join(absProject, "dfm-out");
   fs.mkdirSync(outDir, { recursive: true });
   const mdLines = [
-    `# Design for Motion QA Report (v0.9 · ${resolvedEngine}) — ${brief?.title || path.basename(absProject)}`,
+    `# Design for Motion QA Report (v1.0 · ${resolvedEngine}) — ${brief?.title || path.basename(absProject)}`,
     "",
     `- **Summary**: PASS: ${summary.pass} | REVIEW: ${summary.review} | FIX: ${summary.fix} | BLOCKER: ${summary.blocker}`,
     `- **Checked At**: ${new Date().toISOString()}`,

@@ -7,7 +7,7 @@ description: >-
   paginated sharp review boards with zero-crash QA, and native sound design.
 ---
 
-# dfm-kit v0.9.2 — Style-Agnostic Design-for-Motion Director System
+# dfm-kit v1.0 — Style-Agnostic Design-for-Motion Director System
 
 Local toolkit root: `<DFM_ROOT>` (invoked directly via Node CLI; zero npm dependencies).
 
