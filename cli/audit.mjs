@@ -19,6 +19,19 @@ const RUBRIC_PATH = path.resolve(__dirname, "..", "spec", "rubric.json");
 
 const TAILWIND_CLICHE_HEXES = ["#3b82f6", "#f97316", "#ef4444", "#22c55e", "#a855f7"];
 
+function collectLinkedLocalScripts(htmlSrc, baseDir) {
+  let jsBundle = "";
+  for (const m of htmlSrc.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)) {
+    const srcAttr = m[1];
+    if (/^https?:|dfm-(?:time|motion|lens|hyperframes|remotion)\./i.test(srcAttr)) continue;
+    const jsPath = path.resolve(baseDir, srcAttr.split("?")[0]);
+    if (fs.existsSync(jsPath) && !fs.statSync(jsPath).isDirectory()) {
+      jsBundle += `\n/* ${path.basename(jsPath)} */\n` + fs.readFileSync(jsPath, "utf8");
+    }
+  }
+  return jsBundle;
+}
+
 function detectAntiCinemaTraps(src, relPrefix = "") {
   const found = [];
   const p = relPrefix ? `${relPrefix}: ` : "";
@@ -42,7 +55,7 @@ function detectAntiCinemaTraps(src, relPrefix = "") {
   const hasHorizontalPush =
     /translate\s*\(\s*\$\{\s*-\s*(?:spacing|slideWidth|pageWidth|1080|11\d\d|1920)\s*\*/i.test(src) ||
     /translateX\s*\(\s*\$\{\s*-\s*(?:spacing|slideWidth|pageWidth|1080|11\d\d|1920)\s*\*/i.test(src);
-  const hasRichCamera = /createWorldCamera|worldCameraStyle|perspective\s*:|rotateX|rotateY|dollyZoom|crashZoom|portalZoom/i.test(src);
+  const hasRichCamera = /createWorldCamera|worldCameraStyle|bindWorldCameraToGsap|perspective\s*:|rotateX|rotateY|dollyZoom|crashZoom|portalZoom/i.test(src);
   if (hasUniformRowStrip && hasHorizontalPush && !hasRichCamera) {
     found.push({
       rule: "Q11",
@@ -51,11 +64,32 @@ function detectAntiCinemaTraps(src, relPrefix = "") {
     });
   }
 
+  // 3. Hard-cut JS scene switcher (.style.display='none'/'inline' or visibility toggle swapping scenes without spatial camera/transitions)
+  const swapsDisplay =
+    /\.style\.display\s*=\s*['"`]none['"`]/i.test(src) &&
+    /\.style\.display\s*=\s*['"`](?:inline|block|flex|grid|initial|unset|)['"`]/i.test(src);
+  const swapsVisibility =
+    /\.style\.visibility\s*=\s*['"`]hidden['"`]/i.test(src) &&
+    /\.style\.visibility\s*=\s*['"`]visible['"`]/i.test(src);
+  const hasSceneSwitchVocab = /\b(?:activeScene|currentScene|activeBeat|currentBeat|vis-|scene-|shot-)\b/i.test(src);
+  const hasContinuousTransition =
+    /createWorldCamera|worldCameraStyle|bindWorldCameraToGsap|portalZoom|whipPan|crashZoom|dollyZoom|filmBurn/i.test(src);
+  if ((swapsDisplay || swapsVisibility) && hasSceneSwitchVocab && !hasContinuousTransition) {
+    found.push({
+      rule: "Q11",
+      level: "Fix",
+      msg: `${p}Hard-cut scene switcher detected (.style.display / .style.visibility toggling between scenes with no continuous camera or physical transition) — connect beats with createWorldCamera 3D motion, portalZoom, whipPan, occlusion wipes, or shared-element morphs instead of instant slide swaps`
+    });
+  }
+
   return found;
 }
 
 function scanShotSource(filePath) {
-  const src = fs.readFileSync(filePath, "utf8");
+  const htmlSrc = fs.readFileSync(filePath, "utf8");
+  const projectDir = path.dirname(filePath);
+  const linkedJs = collectLinkedLocalScripts(htmlSrc, projectDir);
+  const src = htmlSrc + linkedJs;
   const issues = [];
 
   if (/\brequestAnimationFrame\s*\(/.test(src)) {
@@ -126,9 +160,8 @@ function scanShotSource(filePath) {
   }
 
   // Collect linked local project CSS (excluding dfm runtime CSS) so external scene.css is also audited
-  const projectDir = path.dirname(filePath);
   let cssBundle = "";
-  for (const m of src.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']/gi)) {
+  for (const m of htmlSrc.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']/gi)) {
     const href = m[1];
     if (/^https?:|dfm-craft\.css|dfm-stage\.css/i.test(href)) continue;
     const cssPath = path.resolve(projectDir, href);
@@ -413,7 +446,19 @@ function scanHyperFramesProject(absProject, brief) {
 
   for (const { full, isSub } of htmlEntries) {
     const rel = path.relative(absProject, full).replaceAll("\\", "/");
-    const src = fs.readFileSync(full, "utf8");
+    const htmlSrc = fs.readFileSync(full, "utf8");
+    const baseDir = path.dirname(full);
+    const linkedJs = collectLinkedLocalScripts(htmlSrc, baseDir);
+    let linkedCss = "";
+    for (const lm of htmlSrc.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']/gi)) {
+      const href = lm[1];
+      if (/^https?:|dfm-craft\.css|dfm-stage\.css/i.test(href)) continue;
+      const cssPath = path.resolve(baseDir, href.split("?")[0]);
+      if (fs.existsSync(cssPath) && !fs.statSync(cssPath).isDirectory()) {
+        linkedCss += "\n" + fs.readFileSync(cssPath, "utf8");
+      }
+    }
+    const src = htmlSrc + linkedJs + linkedCss;
     combinedCorpus += "\n" + src;
 
     if (!isSub && /\bdata-composition-id\s*=/.test(src)) hasRootCompId = true;
