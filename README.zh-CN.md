@@ -75,13 +75,23 @@ flowchart LR
 - **Google Chrome** 或 **Microsoft Edge**（用于无头 CDP 渲染；可用环境变量 `DFM_BROWSER` 指定路径）
 - **FFmpeg**（可选，仅在使用 `dfm preview` 或 `cli/textures-prep.mjs` 时需要）
 
-### 1. 克隆并一键安装 Skill
+### 1. 克隆仓库、（强烈推荐）放入本地素材并安装 Skill
 ```bash
 git clone https://github.com/Ph0enixHan/dfm-kit.git
 cd dfm-kit
-node cli/dfm.mjs install-skill
+
+# 强烈推荐：放入你自己的 CC0 纸纹 / 胶片颗粒 / 网点等扫描材质到 textures/ 目录，并运行一次代理生成：
+node cli/textures-prep.mjs
+
+# 一键安装 Skill（会自动把本地材质清单内联写入 Skill，AI 无需翻目录即可直接调用）：
+node cli/dfm.mjs install-skill                       # OpenFilm Studio（默认）
+node cli/dfm.mjs install-skill ~/.codex/skills --engine remotion
+node cli/dfm.mjs install-skill ~/.codex/skills --engine hyperframes
 ```
-该命令会自动将 `skill/SKILL.md` 写入本机 OpenFilm Studio 的 `Skills/dfm-kit/` 目录（也可通过 `DFM_OPENFILM_SKILLS` 或命令行参数指定任意技能目录），自动绑定本地仓库路径；若你在 `textures/web/` 放有真实扫描材质，还会把材质清单自动内联进已安装的 Skill，AI 无需翻目录即可直接调用。
+> [!TIP]
+> **显著提升成片质感的建议**：虽然内置的 `runtime/dfm-craft.css` 可以零素材开箱即用，但**强烈建议先往 `textures/` 文件夹放几套真实扫描材质**（纸纹、胶片颗粒、漏光、印刷网点，跑完 `node cli/textures-prep.mjs` 后再执行 `install-skill`），并在制作具体视频时把你自己的 **产品截图、Logo、实拍照片或配音/音效** 放到项目素材目录（OpenFilm / HyperFrames 放 `assets/`，Remotion 放 `public/`）。真实材质 + 真实素材能大幅提升画面高级感，避免廉价纯色块感。
+
+该命令会自动将对应引擎的 Skill 写入目标目录（也可通过 `DFM_OPENFILM_SKILLS` 或命令行参数指定任意技能目录），自动绑定本地仓库路径，并将本机 `textures/web/` 材质清单及按底色匹配的混合模式自动写入 Skill。
 
 ### 2. 用 AI 导演成片
 在你的项目里调用 `dfm-kit` 技能并描述视频内容（甚至只给一句话，可选附带参考剧照或色卡），AI 会自动跑完上述 6 步导演闭环。
@@ -103,9 +113,14 @@ node cli/dfm.mjs install-skill
 
 ---
 
-## 可选本地真实材质库
+## 强烈推荐：配置本地真实材质与项目素材（显著提升成片质量）
 
-`runtime/dfm-craft.css` 内置的程序化质感开箱即用。如果你希望叠加真实手工纸纹、35mm 胶片齿孔或复古网点，可将自己的 CC0 材质包放入 `textures/` 目录，运行 `node cli/textures-prep.mjs` 一次性生成 `<=1200px` 轻量工作代理到 `textures/web/`（详见 [textures/README.md](./textures/README.md)）。
+`runtime/dfm-craft.css` 内置的程序化质感支持零素材开箱即用，但如果想让成片真正摆脱“纯代码扁平感”、拥有印刷纸感或暗房胶片质感，**建议在安装 Skill 前先往 `textures/` 放入几套真实扫描素材**：
+
+1. **放入材质包**：将自己的 CC0 / 商用授权材质（如棉纸/卡纸纹理、揉皱纸、35mm 胶片颗粒与齿孔边框、暗房漏光、复古印刷网点——可在 [Texturelabs.org](https://texturelabs.org)、Unsplash 或 Pexels 获取）放入 `textures/` 目录。
+2. **一次性生成轻量代理**：运行 `node cli/textures-prep.mjs`，工具会自动在 `textures/web/` 生成 `<=1200px` 极速代理图并写入 `textures/manifest.json`（均已被 `.gitignore` 忽略，不会污染 Git 仓库）。
+3. **重新执行 `install-skill`**：安装脚本会自动把你本机所有材质的精确路径与按底色推荐的叠加模式（深底 `screen`、浅底 `multiply`）内联写入 Skill，AI 开拍时可直接调用。
+4. **放好项目自有素材**：制作产品介绍或科普视频时，也建议提前把你的真实产品截图、Logo、实拍图或配音/音效放进项目素材目录（OpenFilm 与 HyperFrames 放 `assets/`，Remotion 放 `public/`），真实素材结合 3D 运镜远胜纯 CSS 硬画（详见 [textures/README.md](./textures/README.md)）。
 
 ## 开源协议
 

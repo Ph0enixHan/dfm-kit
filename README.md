@@ -76,13 +76,24 @@ Assemble frame-synced SFX (`whoosh`, `impact`, `latch`) and restrained music tra
 - **Google Chrome** or **Microsoft Edge** (headless CDP rendering; override path with `DFM_BROWSER`)
 - **FFmpeg** (optional — only needed for `dfm preview` or `cli/textures-prep.mjs`)
 
-### 1. Clone & Install the Skill (1 Command)
+### 1. Clone, (Recommended) Add Local Textures, & Install the Skill
 ```bash
 git clone https://github.com/Ph0enixHan/dfm-kit.git
 cd dfm-kit
-node cli/dfm.mjs install-skill
+
+# Strongly recommended for higher visual craft:
+# Drop CC0 scanned paper / film grain / halftone packs into textures/, bake proxies once:
+node cli/textures-prep.mjs
+
+# Install skill (automatically injects your local texture catalog into the skill):
+node cli/dfm.mjs install-skill                       # OpenFilm Studio (default)
+node cli/dfm.mjs install-skill ~/.codex/skills --engine remotion
+node cli/dfm.mjs install-skill ~/.codex/skills --engine hyperframes
 ```
-This installs `skill/SKILL.md` into your OpenFilm Studio `Skills/dfm-kit/` folder (override destination via `DFM_OPENFILM_SKILLS` or pass any agent skills directory as an argument), binds `<DFM_ROOT>` to your local clone automatically, and — if you keep real scan textures in `textures/web/` — inlines a catalog of them into the installed skill so the agent can use them without browsing folders.
+> [!TIP]
+> **Strongly Recommended for Best Output Quality**: While `runtime/dfm-craft.css` provides zero-asset procedural grain/vignette out of the box, adding even a few **real scanned paper, film-grain, or halftone textures** into `textures/` (then running `node cli/textures-prep.mjs` before `install-skill`) — and placing your own **brand logos, screenshots, photos, or audio** into your project's media folder (`assets/` for OpenFilm/HyperFrames, `public/` for Remotion) — noticeably elevates surface tactility and prevents flat "pure-CSS" visuals.
+
+This installs the skill into your target skills folder (override destination via `DFM_OPENFILM_SKILLS` or pass any agent skills directory as an argument), binds `<DFM_ROOT>` to your local clone automatically, and inlines a ground-matched catalog of any local `textures/web/` proxies so the agent can copy and blend them immediately without browsing folders.
 
 ### 2. Direct a Video with Your AI Agent
 Invoke the `dfm-kit` skill and describe your video (or even give a single sentence, optionally with a reference color card or film still). The agent automatically executes the 6-step DFM pipeline end-to-end.
@@ -109,21 +120,24 @@ Invoke the `dfm-kit` skill and describe your video (or even give a single senten
 ```text
 dfm-kit/
 ├── cli/
-│   ├── dfm.mjs              # Main CLI entry
-│   ├── board.mjs            # Fast 1-board review renderer + optional 5 HD boards + 0.25s crash sweep
-│   ├── audit.mjs            # Style-agnostic Q1-Q16 QA auditor (anti-slide, Truth-to-Medium, VTT & audio gates)
-│   ├── snap.mjs             # 1-2s targeted frame inspector
+│   ├── dfm.mjs              # Main CLI entry (auto-detects OpenFilm, Remotion & HyperFrames)
+│   ├── adapters/            # Engine adapters (openfilm.mjs, remotion.mjs, hyperframes.mjs)
+│   ├── board.mjs            # Sharp paginated review boards (<=6 beats/page) + 0.25s crash sweep
+│   ├── audit.mjs            # Style-agnostic Q1-Q16 QA auditor (anti-slide, anti-carousel, Truth-to-Medium, audio)
+│   ├── snap.mjs             # 1-3s targeted frame inspector
 │   ├── palette.mjs          # OKLCH Color Script extractor from any reference image
 │   ├── color-math.mjs       # sRGB <-> OKLCH color math & filmic role assignment
 │   ├── cdp-browser.mjs      # Zero-dependency headless Chrome/Edge CDP driver with persistent HTTP cache
 │   ├── openfilm-sync.mjs    # OpenFilm Studio draft packager & sync adapter
-│   ├── install-skill.mjs    # 1-command skill installer
-│   ├── preview.mjs          # Deterministic 30fps MP4 exporter (headless CLI)
-│   └── textures-prep.mjs    # Optional <=1200px proxy baker for your local CC0 texture packs
-├── runtime/                 # Optional zero-dependency browser modules (copy on demand)
+│   ├── install-skill.mjs    # 1-command multi-engine skill installer with local texture catalog injection
+│   ├── preview.mjs          # Deterministic 30fps MP4 exporter (OpenFilm headless CLI)
+│   └── textures-prep.mjs    # <=1200px proxy baker for your local CC0 tactile texture packs
+├── runtime/                 # Optional zero-dependency browser/React modules (copy on demand)
 │   ├── dfm-motion.js        # Continuous 3D world camera, radial rig & reveal choreography
 │   ├── dfm-time.js          # Deterministic clamped easings & physical motion primitives
 │   ├── dfm-lens.js          # 13-API cinema optical lens & camera rig
+│   ├── dfm-remotion.js      # Declarative React/Remotion camera, lens & texture style bridge (+ .d.ts)
+│   ├── dfm-hyperframes.js   # HyperFrames seekable timeline & GSAP world-camera bridge
 │   ├── dfm-craft.css        # Procedural grain, halftone, halation, paper fiber, vignette
 │   └── dfm-stage.css        # Optional multi-plane stage helpers
 ├── spec/
@@ -132,17 +146,24 @@ dfm-kit/
 │   ├── fonts.json           # Curated Google Fonts casting pairings
 │   └── continuity-grammar.json # Non-slide spatial & visual continuity grammar
 ├── skill/
-│   └── SKILL.md             # Portable agent director skill
+│   ├── SKILL.md             # OpenFilm director skill
+│   ├── SKILL.remotion.md    # Remotion director skill
+│   └── SKILL.hyperframes.md # HyperFrames director skill
 ├── docs/images/             # Verified workflow & real-case screenshots
 └── textures/
-    └── README.md            # Guide for optional local CC0 tactile texture packs
+    └── README.md            # Guide for local CC0 tactile texture packs (recommended for best craft)
 ```
 
 ---
 
-## Optional Local Tactile Textures
+## Recommended: Add Real Tactile Textures & Project Assets
 
-Procedural textures in `runtime/dfm-craft.css` work out of the box with zero assets. If you want real scanned paper, 35mm film frames, or analog halftones, drop your own CC0 packs into `textures/` and run `node cli/textures-prep.mjs` to bake lightweight `<=1200px` proxies into `textures/web/` (see [textures/README.md](./textures/README.md)).
+To get noticeably higher visual craft (richer print/film tactility instead of flat solid fills), **we strongly recommend populating `textures/` before installing the skill**:
+
+1. **Drop your own CC0 / licensed texture packs** (cotton/cardboard paper, crumpled paper, 35mm film grain/borders, scanned halftone — e.g. from [Texturelabs.org](https://texturelabs.org), Unsplash, or Pexels) into `textures/`.
+2. **Bake lightweight `<=1200px` proxies once**: run `node cli/textures-prep.mjs` to populate `textures/web/` and `textures/manifest.json` (both are gitignored so the repo stays tiny and license-clean).
+3. **Re-run `install-skill`**: `dfm-kit` automatically injects your local texture paths and ground-matched blend recipes (`screen` for dark grounds, `multiply` for light grounds) straight into the installed `SKILL.md`, so the agent uses them immediately.
+4. **Stage real project media**: when making a product film or editorial explainer, also place your real screenshots, logos, photos, or audio into the project's media folder (`assets/` in OpenFilm & HyperFrames, `public/` in Remotion) — real assets inside a 3D camera world always beat hand-coded fake gradients. (See [textures/README.md](./textures/README.md) for blend-mode recipes.)
 
 ## License
 
