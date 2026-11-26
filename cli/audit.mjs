@@ -82,6 +82,20 @@ function detectAntiCinemaTraps(src, relPrefix = "") {
     });
   }
 
+  // 4. Fake-3D layered crossfade deck (6+ stacked scene layers toggled in-place via visibility/display + opacity even if createWorldCamera is imported for subtle wobble)
+  const hasStackedLayerList =
+    /(?:const|let|var)\s+(?:layers|scenes|beats|slides|cards|panels|groups)\s*=\s*\[[^\]]*(?:,[^\]]*){5,}\]/i.test(src);
+  const togglesLayerVisibilityAndOpacity =
+    /\.style\.visibility\s*=[^;\n]*['"`]hidden['"`][^;\n]*['"`]visible['"`]/i.test(src) &&
+    /\.style\.opacity\s*=/i.test(src);
+  if (hasStackedLayerList && togglesLayerVisibilityAndOpacity) {
+    found.push({
+      rule: "Q11",
+      level: "Fix",
+      msg: `${p}Layered crossfade slide-deck detected (6+ stacked scene layers toggled in-place via visibility + opacity) — place beats at distinct 3D world coordinates with real camera travel or morph shared geometry instead of crossfading stacked full-screen layers`
+    });
+  }
+
   return found;
 }
 
@@ -882,6 +896,9 @@ export function runAudit(projectDir, { engine = null } = {}) {
           const stalledHeroBeats = board.shots.filter(
             (s) => typeof s.motionDelta === "number" && s.duration >= 6.5 && s.motionDelta >= 0.8 && s.motionDelta < 4.0
           );
+          const preziLongHolds = board.shots.filter(
+            (s) => typeof s.motionDelta === "number" && s.duration >= 7.0 && s.motionDelta >= 4.0 && s.motionDelta < 16.0
+          );
           if (staticBeats.length) {
             status = "Fix";
             notes.push(
@@ -896,6 +913,11 @@ export function runAudit(projectDir, { engine = null } = {}) {
             status = "Fix";
             notes.push(
               `${stalledHeroBeats.map((s) => `${s.id} (${s.duration}s, Δ${s.motionDelta})`).join(", ")} holds too long with minimal motion — break long holds into active visual progression or tighten beat duration`
+            );
+          } else if (board.shots.length >= 4 && preziLongHolds.length >= 2) {
+            status = "Fix";
+            notes.push(
+              `${preziLongHolds.length} beats hold >=7s with low visual progression (${preziLongHolds.map((s) => `${s.id}:${s.duration}s/Δ${s.motionDelta}`).join(", ")}) — split long narration segments into 2.5–4.5s documentary sub-beats (wide -> macro push -> live action) instead of Prezi-style long poster holds`
             );
           } else if (!notes.length) {
             const avgDelta = (board.shots.reduce((a, s) => a + (s.motionDelta || 0), 0) / board.shots.length).toFixed(1);
